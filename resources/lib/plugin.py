@@ -8,6 +8,9 @@ import xbmcaddon
 import xbmcplugin
 import xbmc
 from resources.lib.F1TVParser.F1TV_Minimal_API import F1TV_API
+from datetime import datetime
+import time
+
 
 # Get the plugin url in plugin:// notation.
 _url = sys.argv[0]
@@ -86,6 +89,16 @@ def list_events(season_url, year):
     counter = 1
 
     for event in season['eventoccurrence_urls']:
+        xbmc.log(event['start_date'], xbmc.LOGWARNING)
+
+        try:
+            start_date = datetime.strptime(event['start_date'], "%Y-%m-%d")
+        except TypeError:
+            start_date = datetime(*(time.strptime(event['start_date'], "%Y-%m-%d")[0:6]))
+
+        if start_date > datetime.today():
+            continue
+
         # Create a list item with a text label and a thumbnail image.
         list_item = xbmcgui.ListItem(label="{:02d} {}".format(counter, event['name']))
         thumb = ""
@@ -273,3 +286,28 @@ def router(paramstring):
         # If the plugin is called from Kodi UI without any parameters,
         # display the list of video categories
         list_seasons()
+
+
+def run():
+
+    _api_manager.setLanguage(xbmc.getLanguage(format=xbmc.ISO_639_1))
+
+    if _ADDON.getSetting('apikey') == '' or _ADDON.getSetting('system_id') == '':
+        apikey, system_id = _api_manager.account_manager.exteractSessionData()
+        _ADDON.setSetting('apikey', apikey)
+        _ADDON.setSetting('system_id', system_id)
+    else:
+        _api_manager.account_manager.setSessionData(_ADDON.getSetting('apikey'), _ADDON.getSetting('system_id'))
+
+    try:
+        _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
+        xbmc.log(xbmc.getLanguage(format=xbmc.ISO_639_1), xbmc.LOGERROR)
+    except ValueError as error:
+
+        response = xbmcgui.Dialog().yesno('Login not possible.', error.message, 'Enter Settings?',nolabel='Exit', yeslabel='Settings')
+        xbmc.log(error.message, xbmc.LOGERROR)
+        if response:
+            _ADDON.openSettings()
+
+        exit(1)
+    router(sys.argv[2][1:])

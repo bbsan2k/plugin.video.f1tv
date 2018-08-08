@@ -25,3 +25,23 @@ msgstr ""
 msgctxt "#32001"
 msgid "Debug"
 msgstr ""
+
+
+msgctxt "#40001"
+msgid "Username"
+msgstr "Username"
+
+
+msgctxt "#40002"
+msgid "Password"
+msgstr "Password"
+
+
+msgctxt "#40003"
+msgid "API-Key"
+msgstr "API-Key"
+
+
+msgctxt "#40004"
+msgid "System-ID"
+msgstr "System-ID"

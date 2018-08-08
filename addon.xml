@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.f1tv" name="F1TV Kodi Plugin" version="0.0.2" provider-name="BBsan2k">
+<addon id="plugin.video.f1tv" name="F1TV Kodi Plugin" version="0.0.2" provider-name="BBsan2k">
     <requires>
         <import addon="xbmc.python" version="2.25.0"/>
         <import addon="script.module.routing" version="0.2.0"/>
@@ -10,10 +10,11 @@
     </extension>
     <extension point="xbmc.addon.metadata">
         <summary lang="en_GB">Provides functionality to view stream from F1TV</summary>
-        <description lang="en_GB"></description>
+        <description lang="en_GB">Plugin for F1TV Streaming Service</description>
+        <description lang="de_DE">Plugin für F1TV</description>
         <language></language>
         <platform>all</platform>
-        <license>Apache-2.0</license>
+        <license>MIT</license>
         <forum></forum>
         <website></website>
         <email>bbsan2k@gmail.com</email>
@@ -22,7 +23,7 @@
         <disclaimer></disclaimer>
         <assets>
             <icon>resources/F1TV_Logo.png</icon>
-            <fanart>resources/fanart.jpg</fanart>
+            <fanart></fanart>
         </assets>
     </extension>
 </addon>
