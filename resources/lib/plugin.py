@@ -85,17 +85,8 @@ def list_events(season_url, year):
     counter = 1
 
     for event in season['eventoccurrence_urls']:
-        #xbmc.log(event['start_date'], xbmc.LOGWARNING)
 
-        #try:
-        #    start_date = datetime.strptime(event['start_date'], "%Y-%m-%d")
-        #except TypeError:
-        #    start_date = datetime(*(time.strptime(event['start_date'], "%Y-%m-%d")[0:6]))
 
-        #if start_date > datetime.today():
-        #    continue
-
-        # Create a list item with a text label and a thumbnail image.
         list_item = xbmcgui.ListItem(label="{:02d} {}".format(counter, event['name']))
         thumb = ""
         for image in event['image_urls']:

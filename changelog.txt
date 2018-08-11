@@ -1,2 +1,6 @@
+v0.0.3
+- Changed output of Season labels - now using 'name'
+- Fixed Season without event 'start_dates'
+
 v0.0.2
 - Initial version

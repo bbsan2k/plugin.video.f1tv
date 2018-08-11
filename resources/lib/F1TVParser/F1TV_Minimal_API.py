@@ -42,9 +42,9 @@ class F1TV_API:
         if viewing.ok:
             viewing_json = viewing.json()
             if 'chan' in url:
-                return viewing.json()["tokenised_url"]
+                return viewing_json["tokenised_url"]
             else:
-                return viewing.json()["objects"][0]["tata"]["tokenised_url"]
+                return viewing_json["objects"][0]["tata"]["tokenised_url"]
 
     def getSession(self, url):
         """ Get Session Object from API by supplying an url"""
@@ -59,8 +59,6 @@ class F1TV_API:
         complete_url = __TV_API__ + url
         r = self.account_manager.getSession().get(complete_url, params=__TV_API_PARAMS__["event-occurrence"])
 
-        event = None
-
         if r.ok:
             return r.json()
 
@@ -69,7 +67,6 @@ class F1TV_API:
         """ Get Season object from API by supplying an url"""
         complete_url = __TV_API__ + url
         r = self.account_manager.getSession().get(complete_url, params=__TV_API_PARAMS__["season"])
-        season = None
 
         if r.ok:
             return r.json()

@@ -58,7 +58,7 @@ class AccountManager:
         self.username = username
         self.password = password
         self.session_token = token
-        self.auth_headers = {"CD-Language": "en-GB",
+        self.auth_headers = {"CD-Language": "de-DE",
                              "Content-Type": "application/json"}
         self.session = requests.session()
 
