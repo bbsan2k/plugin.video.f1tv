@@ -48,22 +48,18 @@ def list_seasons():
     # for this type of content.
     xbmcplugin.setContent(_handle, 'videos')
     # Get video categories
-    season_list = _api_manager.getSeasons()
+    season_list = _api_manager.getSeasons()['objects']
 
-    for year in reversed(season_list.keys()):
-        season_url = season_list[year]
-        xbmc.log(str(year), level=xbmc.LOGWARNING)
+    for season in season_list:
+        season_url = season['self']
 
-        list_item = xbmcgui.ListItem(label=str(year))
-        # list_item.setArt({'thumb': VIDEOS[category][0]['thumb'],
-        #                   'icon': VIDEOS[category][0]['thumb'],
-        #                   'fanart': VIDEOS[category][0]['thumb']})
+        list_item = xbmcgui.ListItem(label=season['name'])
 
-        list_item.setInfo('video', {'title': str(year),
+        list_item.setInfo('video', {'title': season['name'],
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
 
-        url = get_url(action='list_events', season=season_url, year=year)
+        url = get_url(action='list_events', season=season_url, year=season['name'])
 
         is_folder = True
         # Add our item to the Kodi virtual folder listing.
@@ -89,15 +85,15 @@ def list_events(season_url, year):
     counter = 1
 
     for event in season['eventoccurrence_urls']:
-        xbmc.log(event['start_date'], xbmc.LOGWARNING)
+        #xbmc.log(event['start_date'], xbmc.LOGWARNING)
 
-        try:
-            start_date = datetime.strptime(event['start_date'], "%Y-%m-%d")
-        except TypeError:
-            start_date = datetime(*(time.strptime(event['start_date'], "%Y-%m-%d")[0:6]))
+        #try:
+        #    start_date = datetime.strptime(event['start_date'], "%Y-%m-%d")
+        #except TypeError:
+        #    start_date = datetime(*(time.strptime(event['start_date'], "%Y-%m-%d")[0:6]))
 
-        if start_date > datetime.today():
-            continue
+        #if start_date > datetime.today():
+        #    continue
 
         # Create a list item with a text label and a thumbnail image.
         list_item = xbmcgui.ListItem(label="{:02d} {}".format(counter, event['name']))
@@ -143,7 +139,7 @@ def list_sessions(event_url, event_name):
     event = _api_manager.getEvent(event_url)
 
     for session in event['sessionoccurrence_urls']:
-        list_item = xbmcgui.ListItem(label=session['name'])
+        list_item = xbmcgui.ListItem(label=session['session_name'])
 
         thumb = ""
         for image in session['image_urls']:
@@ -156,11 +152,11 @@ def list_sessions(event_url, event_name):
                           'icon': thumb,
                           'fanart': thumb})
 
-        list_item.setInfo('video', {'title': session['name'],
+        list_item.setInfo('video', {'title': session['session_name'],
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
 
-        url = get_url(action='list_content', session_url=session['self'], session_name=session['name'])
+        url = get_url(action='list_content', session_url=session['self'], session_name=session['session_name'])
 
         is_folder = True
         # Add our item to the Kodi virtual folder listing.

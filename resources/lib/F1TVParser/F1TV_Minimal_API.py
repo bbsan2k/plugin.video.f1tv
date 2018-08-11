@@ -8,7 +8,7 @@ __TV_API__='https://f1tv.formula1.com'
 ''' Parameters for different F1TV API calls'''
 __TV_API_PARAMS__ = {"event-occurrence": {"fields_to_expand": "image_urls,sessionoccurrence_urls,sessionoccurrence_urls__image_urls",
                                "fields": "name,self,image_urls,sessionoccurrence_urls,official_name,start_date,end_date,"
-                                         "sessionoccurrence_urls__name,sessionoccurrence_urls__self,"
+                                         "sessionoccurrence_urls__session_name,sessionoccurrence_urls__self,"
                                          "sessionoccurrence_urls__image_urls,sessionoccurrence_urls__start_time"},
                      "season": {"fields": "year,name,self,eventoccurrence_urls,eventoccurrence_urls__name,eventoccurrence_urls__start_date,"
                                           "eventoccurrence_urls__self,eventoccurrence_urls__image_urls,image_urls",
@@ -81,10 +81,8 @@ class F1TV_API:
 
         seasons = {}
         if r.ok:
-            for season in r.json()["objects"]:
-                seasons[season["year"]] = season["self"]
+            return r.json()
 
-        return seasons
 
     def setLanguage(self, language):
         self.account_manager.session.headers['Accept-Language'] = "{}, en".format(language.upper())
