@@ -86,6 +86,13 @@ def list_events(season_url, year):
 
     for event in season['eventoccurrence_urls']:
 
+        if 'start_date' in event and event['start_date'] is not None:
+            try:
+                start_date = datetime.strptime(event['start_date'], "%Y-%m-%d")
+            except TypeError:
+                start_date = datetime(*(time.strptime(event['start_date'], "%Y-%m-%d")[0:6]))
+            if start_date > datetime.today():
+                continue
 
         list_item = xbmcgui.ListItem(label="{:02d} {}".format(counter, event['name']))
         thumb = ""
