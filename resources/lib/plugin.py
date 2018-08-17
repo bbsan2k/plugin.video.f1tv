@@ -3,6 +3,7 @@
 import sys
 from urllib import urlencode
 from urlparse import parse_qsl
+from urlparse import urlparse
 import xbmcgui
 import xbmcaddon
 import xbmcplugin
@@ -10,6 +11,8 @@ import xbmc
 from resources.lib.F1TVParser.F1TV_Minimal_API import F1TV_API
 from datetime import datetime
 import time
+import requests
+import re
 
 
 # Get the plugin url in plugin:// notation.
@@ -321,6 +324,8 @@ def list_content(session_url, session_name):
 
         url = get_url(action='playContent', content_url=channel['self'])
 
+        list_item.setProperty('IsPlayable', 'true')
+
         is_folder = False
         # Add our item to the Kodi virtual folder listing.
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
@@ -341,6 +346,9 @@ def list_content(session_url, session_name):
         list_item.setInfo('video', {'title': content['title'],
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
+
+        list_item.setProperty('IsPlayable', 'true')
+
         if len(content['items']) > 0:
             url = get_url(action='playContent', content_url=content['items'][0])
 
@@ -353,16 +361,54 @@ def list_content(session_url, session_name):
     xbmcplugin.endOfDirectory(_handle)
 
 
+def getCorrectedM3U8(stream_url):
+    r = requests.get(stream_url)
+    parts = urlparse(stream_url)
+
+    sub_path = ''
+    for component in parts.path.split('/'):
+        if 'm3u8' not in component:
+            sub_path += component + '/'
+    base_url = '{}://{}{}'.format(parts.scheme, parts.netloc, sub_path)
+
+    path = '{}/{}'.format(xbmc.translatePath('special://temp'), 'fixed_stream.m3u8')
+
+    out_file = open(path, 'w+')
+    if r.ok:
+        try:
+            for line in r.content.splitlines():
+                out_line = ''
+                if line.startswith('#EXT-X-MEDIA:') and 'TYPE=CLOSED-CAPTIONS' not in line:
+                    audio_group = re.findall('GROUP-ID=\"(.*?)\"', line)[0]
+                    uri = re.findall('URI=\"(.*?)\"', line)[0]
+                    out_line = line.replace(uri, "{}{}".format(base_url, uri)).replace(audio_group, 'AUDIO_1')
+                elif line.startswith('#EXT-X-STREAM-INF:'):
+                    audio_group = re.findall('AUDIO=\"(.*?)\"', line)[0]
+                    out_line = line.replace(audio_group, 'AUDIO_1')
+                elif not line.startswith('#'):
+                    out_line = '{}{}'.format(base_url, line)
+                else:
+                    out_line = line
+                out_file.write(out_line+'\n')
+        except IndexError:
+            xbmc.log('Malformatted M3U8')
+
+    out_file.close()
+
+    return path
+
+
+
+
 def playContent(content_url):
     _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
-
-    xbmc.log(content_url, level=xbmc.LOGWARNING)
 
     stream_url = _api_manager.getStream(content_url)
 
     xbmc.log(stream_url, level=xbmc.LOGWARNING)
 
-    xbmc.Player().play(stream_url)
+    play_item = xbmcgui.ListItem(path=getCorrectedM3U8(stream_url))
+    xbmcplugin.setResolvedUrl(_handle, True, listitem=play_item)
 
 
 def router(paramstring):

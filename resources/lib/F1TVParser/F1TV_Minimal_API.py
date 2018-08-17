@@ -28,7 +28,7 @@ class F1TV_API:
     def getFields(self, url):
         for key in __TV_API_PARAMS__:
             if key in url:
-                return __TV_API__[key]
+                return __TV_API_PARAMS__[key]
 
     def __init__(self):
         """ Initialize by creating AccountManager object"""
