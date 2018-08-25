@@ -361,6 +361,22 @@ def list_content(session_url, session_name):
     xbmcplugin.endOfDirectory(_handle)
 
 
+def hasMultipleAudioGroups(content):
+    audio_groups = re.findall('AUDIO=\"(.*?)\"', content)
+    ret_val = False
+    try:
+        first_group = audio_groups[0]
+        for group in audio_groups:
+            if group != first_group:
+                ret_val = True
+                break
+
+    except IndexError:
+        ret_val = False
+    return ret_val
+
+
+
 def getCorrectedM3U8(stream_url):
     r = requests.get(stream_url)
     parts = urlparse(stream_url)
@@ -375,7 +391,7 @@ def getCorrectedM3U8(stream_url):
 
     out_file = open(path, 'w+')
     if r.ok:
-        if 'audio-aacl' in r.content:
+        if hasMultipleAudioGroups(r.content):
             try:
                 for line in r.content.splitlines():
                     out_line = ''
