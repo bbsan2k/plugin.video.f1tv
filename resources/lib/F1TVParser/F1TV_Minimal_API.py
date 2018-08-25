@@ -9,19 +9,26 @@ __TV_API__='https://f1tv.formula1.com'
 __TV_API_PARAMS__ = {"event-occurrence": {"fields_to_expand": "image_urls,sessionoccurrence_urls,sessionoccurrence_urls__image_urls",
                                "fields": "name,self,image_urls,sessionoccurrence_urls,official_name,start_date,end_date,"
                                          "sessionoccurrence_urls__session_name,sessionoccurrence_urls__self,"
-                                         "sessionoccurrence_urls__image_urls,sessionoccurrence_urls__start_time"},
-                     "season": {"fields": "year,name,self,eventoccurrence_urls,eventoccurrence_urls__name,eventoccurrence_urls__start_date,"
+                                         "sessionoccurrence_urls__image_urls,sessionoccurrence_urls__start_time,sessionoccurrence_urls__available_for_user,sessionoccurrence_urls__content_urls"},
+                     "race-season": {"fields": "year,name,self,eventoccurrence_urls,eventoccurrence_urls__name,eventoccurrence_urls__start_date,"
                                           "eventoccurrence_urls__self,eventoccurrence_urls__image_urls,image_urls",
                                 "fields_to_expand": "eventoccurrence_urls,eventoccurrence_urls__image_urls,image_urls"},
                      "session-occurrence": {"fields": "name,self,image_urls,status,channel_urls,start_time,content_urls,session_name",
                                  "fields_to_expand": "channel_urls,image_urls,content_urls,channel_urls__image_urls,content_urls__image_urls,channel_urls__driver_urls,channel_urls__driver_urls__image_urls"},
-                     "channel": "",
-                     "race_season": {"order": "-year"}}
+                     "circuit": {"fields": "name,self,eventoccurrence_urls,eventoccurrence_urls__name,eventoccurrence_urls__start_date,"
+                                          "eventoccurrence_urls__self,eventoccurrence_urls__image_urls,eventoccurrence_urls__official_name",
+                                "fields_to_expand": "eventoccurrence_urls,eventoccurrence_urls__image_urls"}
+                     }
 
 
 
 class F1TV_API:
     """ Main API Object - is used to retrieve API information """
+
+    def getFields(self, url):
+        for key in __TV_API_PARAMS__:
+            if key in url:
+                return __TV_API_PARAMS__[key]
 
     def __init__(self):
         """ Initialize by creating AccountManager object"""
@@ -66,7 +73,7 @@ class F1TV_API:
     def getSeason(self, url):
         """ Get Season object from API by supplying an url"""
         complete_url = __TV_API__ + url
-        r = self.account_manager.getSession().get(complete_url, params=__TV_API_PARAMS__["season"])
+        r = self.account_manager.getSession().get(complete_url, params=self.getFields(url)) #__TV_API_PARAMS__["season"])
 
         if r.ok:
             return r.json()
@@ -74,12 +81,26 @@ class F1TV_API:
     def getSeasons(self):
         """ Get all season urls that are available at API"""
         complete_url = __TV_API__ + "/api/race-season/"
-        r = self.account_manager.getSession().get(complete_url, params=__TV_API_PARAMS__["race_season"])
+        r = self.account_manager.getSession().get(complete_url, params={'order': '-year'})
 
-        seasons = {}
         if r.ok:
             return r.json()
 
+    def getCircuits(self):
+        """ Get all Circuit urls that are available at API"""
+        complete_url = __TV_API__ + "/api/circuit/"
+        r = self.account_manager.getSession().get(complete_url, params={"fields": "name,eventoccurrence_urls,self"})
+
+        if r.ok:
+            return r.json()
+
+    def getCircuit(self, url):
+        """ Get Circuit object from API by supplying an url"""
+        complete_url = __TV_API__ + url
+        r = self.account_manager.getSession().get(complete_url, params=__TV_API_PARAMS__["circuit"])
+
+        if r.ok:
+            return r.json()
 
     def setLanguage(self, language):
         self.account_manager.session.headers['Accept-Language'] = "{}, en".format(language.upper())

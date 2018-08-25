@@ -3,6 +3,7 @@
 import sys
 from urllib import urlencode
 from urlparse import parse_qsl
+from urlparse import urlparse
 import xbmcgui
 import xbmcaddon
 import xbmcplugin
@@ -10,6 +11,8 @@ import xbmc
 from resources.lib.F1TVParser.F1TV_Minimal_API import F1TV_API
 from datetime import datetime
 import time
+import requests
+import re
 
 
 # Get the plugin url in plugin:// notation.
@@ -19,6 +22,9 @@ _handle = int(sys.argv[1])
 
 _api_manager = F1TV_API()
 _ADDON = xbmcaddon.Addon()
+
+def fix_string(string_to_fix):
+    return u' '.join(string_to_fix).encode('utf-8').strip()
 
 def get_url(**kwargs):
     """
@@ -35,6 +41,28 @@ def get_seasons():
     season_list = _api_manager.getSeasons()
 
     return season_list
+
+def get_mainpage():
+    list_item = xbmcgui.ListItem(label="List by Season")
+    url = get_url(action='list_seasons')
+
+    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+
+    list_item = xbmcgui.ListItem(label="List by Circuit")
+    url = get_url(action='list_circuits')
+
+    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+
+    list_item = xbmcgui.ListItem(label="Settings")
+    url = get_url(action='settings')
+
+    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_handle)
+
 
 
 def list_seasons():
@@ -59,7 +87,7 @@ def list_seasons():
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
 
-        url = get_url(action='list_events', season=season_url, year=season['name'])
+        url = get_url(action='list_season_events', season=season_url, year=season['name'])
 
         is_folder = True
         # Add our item to the Kodi virtual folder listing.
@@ -70,7 +98,43 @@ def list_seasons():
     xbmcplugin.endOfDirectory(_handle)
 
 
-def list_events(season_url, year):
+def list_circuits():
+    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
+
+    # Set plugin category. It is displayed in some skins as the name
+    # of the current section.
+    xbmcplugin.setPluginCategory(_handle, 'Circuits')
+    # Set plugin content. It allows Kodi to select appropriate views
+    # for this type of content.
+    xbmcplugin.setContent(_handle, 'videos')
+    # Get video categories
+    circuits = _api_manager.getCircuits()['objects']
+
+    for circuit in circuits:
+        circuit_url = circuit['self']
+
+        if len(circuit['eventoccurrence_urls']) == 0:
+            continue
+        list_item = xbmcgui.ListItem(label=circuit['name'])
+
+        xbmc.log(fix_string(circuit['name']), xbmc.LOGNOTICE)
+        list_item.setInfo('video', {'title': circuit['name'],
+                                    'genre': "Motorsport",
+                                    'mediatype': 'video'})
+
+        url = get_url(action='list_circuit_events', circuit=circuit_url, name=fix_string(circuit['name']))
+
+        is_folder = True
+        # Add our item to the Kodi virtual folder listing.
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_LABEL)
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_handle)
+
+
+def list_season_events(season_url, year):
+
     _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
 
     # Set plugin category. It is displayed in some skins as the name
@@ -124,9 +188,62 @@ def list_events(season_url, year):
     xbmcplugin.endOfDirectory(_handle)
 
 
+def list_circuit_events(circuit_url, circuit_name):
+
+    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
+
+    # Set plugin category. It is displayed in some skins as the name
+    # of the current section.
+    xbmcplugin.setPluginCategory(_handle, circuit_name)
+    # Set plugin content. It allows Kodi to select appropriate views
+    # for this type of content.
+    xbmcplugin.setContent(_handle, 'videos')
+    # Get video categories
+    circuit = _api_manager.getCircuit(circuit_url)
+
+    for event in circuit['eventoccurrence_urls']:
+
+        if 'start_date' in event and event['start_date'] is not None:
+            try:
+                start_date = datetime.strptime(event['start_date'], "%Y-%m-%d")
+            except TypeError:
+                start_date = datetime(*(time.strptime(event['start_date'], "%Y-%m-%d")[0:6]))
+            if start_date > datetime.today():
+                continue
+
+        list_item = xbmcgui.ListItem(label=event['official_name'])
+        thumb = ""
+        for image in event['image_urls']:
+            if image['type'] == "Thumbnail":
+                thumb = image['url']
+                break
+        # Create a list item with a text label and a thumbnail image.
+
+        list_item.setArt({'thumb': thumb,
+                          'icon': thumb,
+                          'fanart': thumb})
+
+        list_item.setInfo('video', {'title': event['official_name'],
+                                    'genre': "Motorsport",
+                                    'mediatype': 'video'})
+
+        url = get_url(action='list_sessions', event_url=event['self'], event_name=fix_string(event['official_name']))
+
+        is_folder = True
+        # Add our item to the Kodi virtual folder listing.
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_LABEL)
+
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_handle)
+
 def list_sessions(event_url, event_name):
     _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
 
+
+    xbmc.log("{} - {}".format(event_name, event_url), xbmc.LOGINFO)
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
     xbmcplugin.setPluginCategory(_handle, event_name)
@@ -137,7 +254,9 @@ def list_sessions(event_url, event_name):
     event = _api_manager.getEvent(event_url)
 
     for session in event['sessionoccurrence_urls']:
-        list_item = xbmcgui.ListItem(label=session['session_name'])
+
+        if session['available_for_user'] is False and len(session['content_urls']) == 0:
+            continue
 
         thumb = ""
         for image in session['image_urls']:
@@ -145,6 +264,7 @@ def list_sessions(event_url, event_name):
                 thumb = image['url']
                 break
         # Create a list item with a text label and a thumbnail image.
+        list_item = xbmcgui.ListItem(label=session['session_name'])
 
         list_item.setArt({'thumb': thumb,
                           'icon': thumb,
@@ -204,6 +324,8 @@ def list_content(session_url, session_name):
 
         url = get_url(action='playContent', content_url=channel['self'])
 
+        list_item.setProperty('IsPlayable', 'true')
+
         is_folder = False
         # Add our item to the Kodi virtual folder listing.
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
@@ -224,6 +346,9 @@ def list_content(session_url, session_name):
         list_item.setInfo('video', {'title': content['title'],
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
+
+        list_item.setProperty('IsPlayable', 'true')
+
         if len(content['items']) > 0:
             url = get_url(action='playContent', content_url=content['items'][0])
 
@@ -236,16 +361,59 @@ def list_content(session_url, session_name):
     xbmcplugin.endOfDirectory(_handle)
 
 
+def getCorrectedM3U8(stream_url):
+    r = requests.get(stream_url)
+    parts = urlparse(stream_url)
+
+    sub_path = ''
+    for component in parts.path.split('/'):
+        if 'm3u8' not in component:
+            sub_path += component + '/'
+    base_url = '{}://{}{}'.format(parts.scheme, parts.netloc, sub_path)
+
+    path = '{}{}'.format(xbmc.translatePath('special://temp'), 'fixed_stream.m3u8')
+
+    out_file = open(path, 'w+')
+    if r.ok:
+        if 'audio-aacl' in r.content:
+            try:
+                for line in r.content.splitlines():
+                    out_line = ''
+                    if line.startswith('#EXT-X-MEDIA:') and 'TYPE=CLOSED-CAPTIONS' not in line:
+                        audio_group = re.findall('GROUP-ID=\"(.*?)\"', line)[0]
+                        uri = re.findall('URI=\"(.*?)\"', line)[0]
+                        corrected_uri= "{}{}".format(base_url, uri) if 'http' not in uri else uri
+                        out_line = line.replace(uri, corrected_uri).replace(audio_group, 'AUDIO_1')
+                    elif line.startswith('#EXT-X-STREAM-INF:'):
+                        audio_group = re.findall('AUDIO=\"(.*?)\"', line)[0]
+                        out_line = line.replace(audio_group, 'AUDIO_1')
+                    elif not line.startswith('#'):
+                        out_line = "{}{}".format(base_url, line) if 'http' not in uri else uri
+                    else:
+                        out_line = line
+                    out_file.write(out_line+'\n')
+            except IndexError:
+                xbmc.log('Malformatted M3U8')
+        else:
+            path = stream_url
+        xbmc.log(r.content, xbmc.LOGDEBUG)
+
+    out_file.close()
+
+    return path
+
+
+
+
 def playContent(content_url):
     _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
 
-    xbmc.log(content_url, level=xbmc.LOGWARNING)
-
     stream_url = _api_manager.getStream(content_url)
 
-    xbmc.log(stream_url, level=xbmc.LOGWARNING)
+    xbmc.log(stream_url, level=xbmc.LOGDEBUG)
 
-    xbmc.Player().play(stream_url)
+    play_item = xbmcgui.ListItem(path=getCorrectedM3U8(stream_url))
+    xbmcplugin.setResolvedUrl(_handle, True, listitem=play_item)
 
 
 def router(paramstring):
@@ -260,9 +428,18 @@ def router(paramstring):
     params = dict(parse_qsl(paramstring))
     # Check the parameters passed to the plugin
     if params:
-        if params['action'] == 'list_events':
+        if params['action'] == 'list_seasons':
+            # List all seasons
+            list_seasons()
+        elif params['action'] == 'list_circuits':
+            # List all seasons
+            list_circuits()
+        elif params['action'] == 'list_season_events':
             # Display the list of videos in a provided category.
-            list_events(params['season'], params['year'])
+            list_season_events(params['season'], params['year'])
+        elif params['action'] == 'list_circuit_events':
+            # Display the list of videos in a provided category.
+            list_circuit_events(params['circuit'], params['name'])
         elif params['action'] == 'list_sessions':
             # Play a video from a provided URL.
             list_sessions(params['event_url'], params['event_name'])
@@ -271,15 +448,17 @@ def router(paramstring):
             list_content(params['session_url'], params['session_name'])
         elif params['action'] == 'playContent':
             playContent(params['content_url'])
+        elif params['action'] == 'settings':
+            _ADDON.openSettings()
         else:
             # If the provided paramstring does not contain a supported action
             # we raise an exception. This helps to catch coding errors,
             # e.g. typos in action names.
             raise ValueError('Invalid paramstring: {0}!'.format(paramstring))
     else:
+        get_mainpage()
         # If the plugin is called from Kodi UI without any parameters,
         # display the list of video categories
-        list_seasons()
 
 
 def run():
