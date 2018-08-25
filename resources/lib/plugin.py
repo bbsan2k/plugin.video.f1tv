@@ -371,27 +371,32 @@ def getCorrectedM3U8(stream_url):
             sub_path += component + '/'
     base_url = '{}://{}{}'.format(parts.scheme, parts.netloc, sub_path)
 
-    path = '{}/{}'.format(xbmc.translatePath('special://temp'), 'fixed_stream.m3u8')
+    path = '{}{}'.format(xbmc.translatePath('special://temp'), 'fixed_stream.m3u8')
 
     out_file = open(path, 'w+')
     if r.ok:
-        try:
-            for line in r.content.splitlines():
-                out_line = ''
-                if line.startswith('#EXT-X-MEDIA:') and 'TYPE=CLOSED-CAPTIONS' not in line:
-                    audio_group = re.findall('GROUP-ID=\"(.*?)\"', line)[0]
-                    uri = re.findall('URI=\"(.*?)\"', line)[0]
-                    out_line = line.replace(uri, "{}{}".format(base_url, uri)).replace(audio_group, 'AUDIO_1')
-                elif line.startswith('#EXT-X-STREAM-INF:'):
-                    audio_group = re.findall('AUDIO=\"(.*?)\"', line)[0]
-                    out_line = line.replace(audio_group, 'AUDIO_1')
-                elif not line.startswith('#'):
-                    out_line = '{}{}'.format(base_url, line)
-                else:
-                    out_line = line
-                out_file.write(out_line+'\n')
-        except IndexError:
-            xbmc.log('Malformatted M3U8')
+        if 'audio-aacl' in r.content:
+            try:
+                for line in r.content.splitlines():
+                    out_line = ''
+                    if line.startswith('#EXT-X-MEDIA:') and 'TYPE=CLOSED-CAPTIONS' not in line:
+                        audio_group = re.findall('GROUP-ID=\"(.*?)\"', line)[0]
+                        uri = re.findall('URI=\"(.*?)\"', line)[0]
+                        corrected_uri= "{}{}".format(base_url, uri) if 'http' not in uri else uri
+                        out_line = line.replace(uri, corrected_uri).replace(audio_group, 'AUDIO_1')
+                    elif line.startswith('#EXT-X-STREAM-INF:'):
+                        audio_group = re.findall('AUDIO=\"(.*?)\"', line)[0]
+                        out_line = line.replace(audio_group, 'AUDIO_1')
+                    elif not line.startswith('#'):
+                        out_line = "{}{}".format(base_url, line) if 'http' not in uri else uri
+                    else:
+                        out_line = line
+                    out_file.write(out_line+'\n')
+            except IndexError:
+                xbmc.log('Malformatted M3U8')
+        else:
+            path = stream_url
+        xbmc.log(r.content, xbmc.LOGDEBUG)
 
     out_file.close()
 
@@ -405,7 +410,7 @@ def playContent(content_url):
 
     stream_url = _api_manager.getStream(content_url)
 
-    xbmc.log(stream_url, level=xbmc.LOGWARNING)
+    xbmc.log(stream_url, level=xbmc.LOGDEBUG)
 
     play_item = xbmcgui.ListItem(path=getCorrectedM3U8(stream_url))
     xbmcplugin.setResolvedUrl(_handle, True, listitem=play_item)
