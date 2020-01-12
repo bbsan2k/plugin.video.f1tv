@@ -52,6 +52,11 @@ def get_mainpage():
     url = get_url(action='list_circuits')
 
     xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    
+    list_item = xbmcgui.ListItem(label="Sets")
+    url = get_url(action='sets')
+    
+    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)    
 
     list_item = xbmcgui.ListItem(label="Settings")
     url = get_url(action='settings')
@@ -64,6 +69,78 @@ def get_mainpage():
     xbmcplugin.endOfDirectory(_handle)
 
 
+def sets():
+    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
+    
+    xbmcplugin.setPluginCategory(_handle, 'Sets')
+    xbmcplugin.setContent(_handle, 'videos')
+    
+    sets = _api_manager.getSets()
+    
+    # for epi in f2_eps:
+        # epi_url = epi['content_url']
+        # epi_data = _api_manager.getAnyURL(epi_url)
+        # name = epi_data['title']
+        # asset = epi_data['items'][0]
+        
+        # list_item = xbmcgui.ListItem(label=name)
+        
+        # list_item.setInfo('video', {'title': name,
+                                    # 'genre': "Motorsport",
+                                    # 'mediatype': 'video'})
+        # url = get_url(action='playContent', content_url=asset)
+        # list_item.setProperty('IsPlayable', 'true')
+        # is_folder = False
+        # xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+    for key in sets:
+        if "/api/sets" in sets[key]:
+            #It's a set, lets go.
+            #Add set as dir
+            list_item = xbmcgui.ListItem(label=key)
+            url = get_url(action='setContents', content_url=sets[key])
+            xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+        elif "/api/episodes" in sets[key]:
+            #It's an episode.
+            epi_data = _api_manager.getEpisode(sets[key])
+            name = epi_data['title']
+            asset = epi_data['items'][0]
+            list_item = xbmcgui.ListItem(label=name)
+            list_item.setInfo('video', {'title': name,
+                                        'genre': 'Motorsport',
+                                        'mediatype': 'video'})
+            url = get_url(action='playContent', content_url=asset)
+            list_item.setProperty('IsPlayable', 'true')
+            is_folder = False
+            xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+    
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
+    xbmcplugin.endOfDirectory(_handle)
+
+def setContents(content_url):
+    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
+    
+    set_content = _api_manager.getSetContent(content_url)
+    
+    xbmcplugin.setPluginCategory(_handle, set_content['title'])
+    xbmcplugin.setContent(_handle, 'videos')
+    
+    for item in set_content['items']:
+        epi_data = _api_manager.getEpisode(item['content_url'])
+        name = epi_data['title']
+        asset = epi_data['items'][0]
+        
+        list_item = xbmcgui.ListItem(label=name)
+        list_item.setInfo('video', {'title': name,
+                                    'genre': 'Motorsport',
+                                    'mediatype': 'video'})
+        url = get_url(action='playContent', content_url=asset)
+        list_item.setProperty('IsPlayable', 'true')
+        is_folder = False
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+    
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
+    xbmcplugin.endOfDirectory(_handle)
+    
 
 def list_seasons():
 
@@ -361,22 +438,6 @@ def list_content(session_url, session_name):
     xbmcplugin.endOfDirectory(_handle)
 
 
-def hasMultipleAudioGroups(content):
-    audio_groups = re.findall('AUDIO=\"(.*?)\"', content)
-    ret_val = False
-    try:
-        first_group = audio_groups[0]
-        for group in audio_groups:
-            if group != first_group:
-                ret_val = True
-                break
-
-    except IndexError:
-        ret_val = False
-    return ret_val
-
-
-
 def getCorrectedM3U8(stream_url):
     r = requests.get(stream_url)
     parts = urlparse(stream_url)
@@ -391,7 +452,7 @@ def getCorrectedM3U8(stream_url):
 
     out_file = open(path, 'w+')
     if r.ok:
-        if hasMultipleAudioGroups(r.content):
+        if 'audio-aacl' in r.content:
             try:
                 for line in r.content.splitlines():
                     out_line = ''
@@ -450,6 +511,10 @@ def router(paramstring):
         elif params['action'] == 'list_circuits':
             # List all seasons
             list_circuits()
+        elif params['action'] == 'sets':
+            sets()
+        elif params['action'] == 'setContents':
+            setContents(params['content_url'])
         elif params['action'] == 'list_season_events':
             # Display the list of videos in a provided category.
             list_season_events(params['season'], params['year'])

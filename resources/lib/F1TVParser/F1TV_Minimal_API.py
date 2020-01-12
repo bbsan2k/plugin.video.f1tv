@@ -101,6 +101,42 @@ class F1TV_API:
 
         if r.ok:
             return r.json()
+    
+    def getF2(self):
+        complete_url = __TV_API__+"/api/sets/coll_4440e712d31d42fb95c9a2145ab4dac7"
+        r = self.account_manager.getSession().get(complete_url)
+        if r.ok:
+            return r.json()
+    
+    def getAnyURL(self, url):
+        complete_url = __TV_API__+url
+        r = self.account_manager.getSession().get(complete_url)
+        if r.ok:
+            return r.json()
+    
+    def getSets(self):
+        complete_url = __TV_API__ + "/api/sets/?slug=home"
+        r = self.account_manager.getSession().get(complete_url)
+        if r.ok:
+            rj = r.json()
+        content = {}
+        for item in rj['objects'][0]['items']:
+            itemj = self.account_manager.getSession().get(__TV_API__+item['content_url']).json()
+            content[itemj['title']] = item['content_url']
+        return content
+    
+    def getSetContent(self, url):
+        complete_url = __TV_API__ + url
+        r = self.account_manager.getSession().get(complete_url)
+        if r.ok:
+            return r.json()
+    
+    def getEpisode(self, url):
+        complete_url = __TV_API__ + url
+        r = self.account_manager.getSession().get(complete_url)
+        if r.ok:
+            return r.json()
+        
 
     def setLanguage(self, language):
         self.account_manager.session.headers['Accept-Language'] = "{}, en".format(language.upper())
