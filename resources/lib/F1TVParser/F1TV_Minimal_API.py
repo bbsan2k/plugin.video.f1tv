@@ -122,24 +122,24 @@ class F1TV_API:
             return r.json()
     
     def getSets(self):
-        complete_url = __TV_API__ + "/api/sets/?slug=home"
+        complete_url = __OLD_TV_API__ + "/api/sets/?slug=home"
         r = self.account_manager.getSession().get(complete_url)
         if r.ok:
             rj = r.json()
         content = {}
         for item in rj['objects'][0]['items']:
-            itemj = self.account_manager.getSession().get(__TV_API__+item['content_url']).json()
+            itemj = self.account_manager.getSession().get(__OLD_TV_API__+item['content_url']).json()
             content[itemj['title']] = item['content_url']
         return content
     
     def getSetContent(self, url):
-        complete_url = __TV_API__ + url
+        complete_url = __OLD_TV_API__ + url
         r = self.account_manager.getSession().get(complete_url)
         if r.ok:
             return r.json()
     
     def getEpisode(self, url):
-        complete_url = __TV_API__ + url
+        complete_url = __OLD_TV_API__ + url
         r = self.account_manager.getSession().get(complete_url)
         if r.ok:
             return r.json()
