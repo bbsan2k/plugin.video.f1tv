@@ -3,7 +3,8 @@ import json
 
 
 ''' General Entry point for F1TV API'''
-__TV_API__='https://f1tv.formula1.com'
+__TV_API__='https://f1tv-api.formula1.com/agl/1.0/gbr/en/all_devices/global/'
+__OLD_TV_API__='https://f1tv.formula1.com'
 
 ''' Parameters for different F1TV API calls'''
 __TV_API_PARAMS__ = {"event-occurrence": {"fields_to_expand": "image_urls,sessionoccurrence_urls,sessionoccurrence_urls__image_urls",
@@ -41,7 +42,7 @@ class F1TV_API:
     def getStream(self, url):
         """ Get stream for supplied viewings item
             This will get the m3u8 url for Content and Channel."""
-        complete_url = __TV_API__ + "/api/viewings/"
+        complete_url = __OLD_TV_API__ + "/api/viewings/"
         item_dict = {"asset_url" if 'ass' in url else "channel_url": url}
 
         viewing = self.account_manager.getSession().post(complete_url, data=json.dumps(item_dict))
@@ -72,7 +73,7 @@ class F1TV_API:
 
     def getSeason(self, url):
         """ Get Season object from API by supplying an url"""
-        complete_url = __TV_API__ + url
+        complete_url = __OLD_TV_API__ + url
         r = self.account_manager.getSession().get(complete_url, params=self.getFields(url)) #__TV_API_PARAMS__["season"])
 
         if r.ok:
@@ -80,7 +81,7 @@ class F1TV_API:
 
     def getSeasons(self):
         """ Get all season urls that are available at API"""
-        complete_url = __TV_API__ + "/api/race-season/"
+        complete_url = __OLD_TV_API__ + "/api/race-season/"
         r = self.account_manager.getSession().get(complete_url, params={'order': '-year'})
 
         if r.ok:
@@ -88,7 +89,7 @@ class F1TV_API:
 
     def getCircuits(self):
         """ Get all Circuit urls that are available at API"""
-        complete_url = __TV_API__ + "/api/circuit/"
+        complete_url = __OLD_TV_API__TV_API__ + "/api/circuit/"
         r = self.account_manager.getSession().get(complete_url, params={"fields": "name,eventoccurrence_urls,self"})
 
         if r.ok:
@@ -110,6 +111,12 @@ class F1TV_API:
     
     def getAnyURL(self, url):
         complete_url = __TV_API__+url
+        r = self.account_manager.getSession().get(complete_url)
+        if r.ok:
+            return r.json()
+            
+    def getAnyOldURL(self, url):
+        complete_url = __OLD_TV_API__+url
         r = self.account_manager.getSession().get(complete_url)
         if r.ok:
             return r.json()
