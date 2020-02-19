@@ -251,7 +251,7 @@ def list_season_events(season_url, year):
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
 
-        url = get_url(action='list_sessions', event_url=event['self'], event_name=event['name'])
+        url = get_url(action='list_sessions', event_url=event['self'].replace("/api/",""), event_name=event['name'])
 
         is_folder = True
         # Add our item to the Kodi virtual folder listing.
@@ -332,26 +332,27 @@ def list_sessions(event_url, event_name):
 
     for session in event['sessionoccurrence_urls']:
 
-        if session['available_for_user'] is False and len(session['content_urls']) == 0:
-            continue
+        #if session['available_for_user'] is False and len(session['content_urls']) == 0:
+        #    continue
 
         thumb = ""
-        for image in session['image_urls']:
-            if image['type'] == "Thumbnail":
-                thumb = image['url']
-                break
+        #for image in session['image_urls']:
+        #    if image['type'] == "Thumbnail":
+        #        thumb = image['url']
+        #        break
         # Create a list item with a text label and a thumbnail image.
-        list_item = xbmcgui.ListItem(label=session['session_name'])
+        list_item = xbmcgui.ListItem(label=session['name'])
+        
 
         list_item.setArt({'thumb': thumb,
                           'icon': thumb,
                           'fanart': thumb})
 
-        list_item.setInfo('video', {'title': session['session_name'],
+        list_item.setInfo('video', {'title': session['name'],
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
 
-        url = get_url(action='list_content', session_url=session['self'], session_name=session['session_name'])
+        url = get_url(action='list_content', session_url=session['self'].replace("/api/",""), session_name=session['name'])
 
         is_folder = True
         # Add our item to the Kodi virtual folder listing.
@@ -373,21 +374,26 @@ def list_content(session_url, session_name):
     xbmcplugin.setContent(_handle, 'videos')
     # Get video categories
     session = _api_manager.getSession(session_url)
+    print(session)
 
     for channel in session['channel_urls']:
+        
 
         thumb = ''
-        if len(channel['driver_urls']) > 0:
-            for image in channel['driver_urls'][0]['image_urls']:
-                if image['type'] == 'Headshot':
-                    thumb = image['url']
-                    break
-        else:
-            for image in session['image_urls']:
-                if image['type'] == 'Thumbnail':
-                    thumb = image['url']
-                    break
+        try:
+            if len(channel['driver_urls']) > 0:
+                for image in channel['driver_urls'][0]['image_urls']:
+                    if image['type'] == 'Headshot':
+                        thumb = image['url']
+                        break
+        except:
+            pass
+        for image in session['image_urls']:
+            if image['type'] == 'Thumbnail':
+                thumb = image['url']
+                break
         # Create a list item with a text label and a thumbnail image.
+        channel = _api_manager.getAnyOldURL(channel)
         name = channel['name'] if 'WIF' not in channel['name'] else session['session_name']
         list_item = xbmcgui.ListItem(label=name)
 
