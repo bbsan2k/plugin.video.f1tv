@@ -414,11 +414,11 @@ def list_content(session_url, session_name):
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
 
     for content in session['content_urls']:
+        content = _api_manager.getAnyOldURL(content)
         thumb = ''
         for image in content['image_urls']:
-            if image['type'] == 'Thumbnail':
-                thumb = image['url']
-                break
+            thumb = image
+            break
         # Create a list item with a text label and a thumbnail image.
         list_item = xbmcgui.ListItem(label=content['title'])
 
