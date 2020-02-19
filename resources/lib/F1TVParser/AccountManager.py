@@ -30,6 +30,13 @@ class AccountManager:
                         elif 'systemId' in line:
                             m = re.findall('\"systemId\": *\"(.*?)\"', line)
                             self.auth_headers['cd-systemid'] = m[0]
+            if 'apikey' in r.text:
+                m = re.findall('apikey: *\"(.*?)\"', r.text)
+                self.auth_headers['apikey'] = m[0]
+            if 'systemId' in r.text:
+                m = re.findall('systemId: *\"(.*?)\"', r.text)
+                self.auth_headers['cd-systemid'] = m[0]
+            print(self.auth_headers)
 
         return self.auth_headers['apikey'], self.auth_headers['cd-systemid']
 
