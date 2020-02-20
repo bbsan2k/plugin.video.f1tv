@@ -43,6 +43,22 @@ def get_seasons():
     return season_list
 
 def get_mainpage():
+    
+    
+    #Get the current live event from sets - sometimes there is nothing live, easiest way to stop errors is to just try: except:
+    try:
+        response = _api_manager.getAnyOldURL('/api/sets?slug=grand-prix-weekend-live')
+        eventurl = response['objects'][0]['items'][0]['content_url'].replace("/api/","")
+        #Get name for nice display
+        response = _api_manager.getAnyURL(eventurl)
+        eventname = "Live Now - "+response['name']
+        list_item = xbmcgui.ListItem(label=eventname)
+        url = get_url(action='list_sessions', event_url=eventurl, event_name=eventname)
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    except:
+        pass
+
+
     list_item = xbmcgui.ListItem(label="List by Season")
     url = get_url(action='list_seasons')
 
