@@ -9,7 +9,11 @@ The trademark "F1TV" is registered by "The Formula 1 Companies"
 
 ## Installation & Updates
 
-Please use the release archive for now. Once the AddOn is out of beta stage, I will submit it to a bigger repository.
+Use the F1TV REpository to install the addon as this will provide updates for you.
+
+You can install the repo either by installing [this](https://raw.githubusercontent.com/bbsan2k/repository.f1tv/master/zips/repository.f1tv/repository.f1tv-1.0.zip) zip file
+
+or by adding: https://bbsan2k.github.io/respository.f1tv/repo as a file source in Kodi and installing the zip through that.
 
 ##Be aware:
 
@@ -21,11 +25,11 @@ Please use the release archive for now. Once the AddOn is out of beta stage, I w
 
 - Watching Content from the archive
 - Watching Content (including cockpit views) from this season
+- Sets for watching other content (shows, documentaries, etc)
 
 ## Backlog
 
 - Add Meta data (if available)
-- Change Menu Structure to also include "Sets" from F1TV Website
 - ...
 
 ## Something doesn't work
