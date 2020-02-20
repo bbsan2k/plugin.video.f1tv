@@ -84,4 +84,4 @@ class AccountManager:
     def login(self, username, password):
         self.username = username
         self.password = password
-        return self.__createSession__()
+        return self.getSession()
