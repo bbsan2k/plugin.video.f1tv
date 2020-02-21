@@ -13,7 +13,7 @@ Use the F1TV REpository to install the addon as this will provide updates for yo
 
 You can install the repo either by installing [this](https://raw.githubusercontent.com/bbsan2k/repository.f1tv/master/zips/repository.f1tv/repository.f1tv-1.0.zip) zip file
 
-or by adding: https://bbsan2k.github.io/respository.f1tv/repo as a file source in Kodi and installing the zip through that.
+or by adding: https://bbsan2k.github.io/repository.f1tv/repo as a file source in Kodi and installing the zip through that.
 
 ##Be aware:
 
@@ -23,8 +23,7 @@ or by adding: https://bbsan2k.github.io/respository.f1tv/repo as a file source i
 
 ## What's working?
 
-- Watching Content from the archive
-- Watching Content (including cockpit views) from this season
+- Watching Content from the archive and current season
 - Sets for watching other content (shows, documentaries, etc)
 
 ## Backlog
