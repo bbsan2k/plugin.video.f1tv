@@ -1,3 +1,12 @@
+v0.1.3
+- Fixed crash in 'Sets'
+- Fixed crash in 'List by Circuit'
+- 'Live Now' active event menu item renamed to 'Current Event' to lessen confusion
+- Future seasons are no longer shown in 'List by Season'
+- Future events are no longer shown
+- All season events under 'List by Season' are no longer prefixed with a 2-digit number. Now they are prefixed by 'Round #' if they are a race.
+- Plugin logo is now 512px x 512px per Kodi standards
+
 v0.0.3
 - Changed output of Season labels - now using 'name'
 - Fixed Season without event 'start_dates'

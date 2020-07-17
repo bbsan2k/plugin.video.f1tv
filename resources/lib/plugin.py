@@ -43,15 +43,15 @@ def get_seasons():
     return season_list
 
 def get_mainpage():
-    
-    
+
+
     #Get the current live event from sets - sometimes there is nothing live, easiest way to stop errors is to just try: except:
     try:
         response = _api_manager.getAnyOldURL('/api/sets?slug=grand-prix-weekend-live')
         eventurl = response['objects'][0]['items'][0]['content_url'].replace("/api/","")
         #Get name for nice display
         response = _api_manager.getAnyURL(eventurl)
-        eventname = "Live Now - "+response['name']
+        eventname = "Current Event - "+response['name']
         list_item = xbmcgui.ListItem(label=eventname)
         url = get_url(action='list_sessions', event_url=eventurl, event_name=eventname)
         xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
@@ -183,8 +183,9 @@ def list_seasons():
         url = get_url(action='list_season_events', season=season_url, year=season['name'])
 
         is_folder = True
-        # Add our item to the Kodi virtual folder listing.
-        xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+        # Add our item to the Kodi virtual folder listing if the season is not in the future
+        if int(season['name'][:4]) <= datetime.now().year:
+            xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
     # Finish creating a virtual folder.
@@ -239,9 +240,10 @@ def list_season_events(season_url, year):
     # Get video categories
     season = _api_manager.getSeason(season_url)
 
-    counter = 1
+    round_counter = 1
 
     for event in season['eventoccurrence_urls']:
+        xbmc.log(str(event), xbmc.LOGNOTICE)
 
         if 'start_date' in event and event['start_date'] is not None:
             try:
@@ -250,8 +252,11 @@ def list_season_events(season_url, year):
                 start_date = datetime(*(time.strptime(event['start_date'], "%Y-%m-%d")[0:6]))
             if start_date > datetime.today():
                 continue
-
-        list_item = xbmcgui.ListItem(label="{:02d} {}".format(counter, event['name']))
+        if event['name'].strip().endswith('Grand Prix') or event['name'].strip() == 'Indianapolis 500':
+            list_item = xbmcgui.ListItem(label="Round {:01d} - {}".format(round_counter, event['name']))
+            round_counter += 1
+        else:
+            list_item = xbmcgui.ListItem(label=event['name'])
         thumb = ""
         for image in event['image_urls']:
             if image['type'] == "Thumbnail":
@@ -273,7 +278,7 @@ def list_season_events(season_url, year):
         # Add our item to the Kodi virtual folder listing.
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
 
-        counter += 1
+
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_LABEL)
 
@@ -293,8 +298,12 @@ def list_circuit_events(circuit_url, circuit_name):
     xbmcplugin.setContent(_handle, 'videos')
     # Get video categories
     circuit = _api_manager.getCircuit(circuit_url)
+    xbmc.log(str(circuit), xbmc.LOGNOTICE)
 
     for event in circuit['eventoccurrence_urls']:
+        xbmc.log(str(event), xbmc.LOGNOTICE)
+
+
 
         if 'start_date' in event and event['start_date'] is not None:
             try:
@@ -320,7 +329,7 @@ def list_circuit_events(circuit_url, circuit_name):
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
 
-        url = get_url(action='list_sessions', event_url=event['self'], event_name=fix_string(event['official_name']))
+        url = get_url(action='list_sessions', event_url=event['self'].replace("/api/", ""), event_name=event['name'])
 
         is_folder = True
         # Add our item to the Kodi virtual folder listing.
@@ -371,8 +380,11 @@ def list_sessions(event_url, event_name):
         url = get_url(action='list_content', session_url=session['self'].replace("/api/",""), session_name=session['name'])
 
         is_folder = True
-        # Add our item to the Kodi virtual folder listing.
-        xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+
+        # Add our item to the Kodi virtual folder listing if the item is not upcoming
+        if session['status'] != 'upcoming':
+            xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_LABEL)
     # Finish creating a virtual folder.
@@ -393,7 +405,6 @@ def list_content(session_url, session_name):
     print(session)
 
     for channel in session['channel_urls']:
-        
 
         thumb = ''
         try:
