@@ -62,6 +62,7 @@ class F1TV_API:
         if r.ok:
             return r.json()
 
+
     def getEvent(self, url, season = None):
         """ Get Event object from API by supplying an url"""
         complete_url = __TV_API__ + url
@@ -89,7 +90,7 @@ class F1TV_API:
 
     def getCircuits(self):
         """ Get all Circuit urls that are available at API"""
-        complete_url = __OLD_TV_API__TV_API__ + "/api/circuit/"
+        complete_url = __OLD_TV_API__ + "/api/circuit/"
         r = self.account_manager.getSession().get(complete_url, params={"fields": "name,eventoccurrence_urls,self"})
 
         if r.ok:
@@ -97,7 +98,7 @@ class F1TV_API:
 
     def getCircuit(self, url):
         """ Get Circuit object from API by supplying an url"""
-        complete_url = __TV_API__ + url
+        complete_url = __OLD_TV_API__ + url
         r = self.account_manager.getSession().get(complete_url, params=__TV_API_PARAMS__["circuit"])
 
         if r.ok:
@@ -129,7 +130,12 @@ class F1TV_API:
         content = {}
         for item in rj['objects'][0]['items']:
             itemj = self.account_manager.getSession().get(__OLD_TV_API__+item['content_url']).json()
-            content[itemj['title']] = item['content_url']
+            if 'title' in list(itemj):
+                content[itemj['title']] = item['content_url']
+            elif 'name' in list(itemj):
+                content[itemj['name']] = item['content_url']
+            else:
+                content[itemj['UNKNOWN SET: ' + 'uid']] = item['content_url']
         return content
     
     def getSetContent(self, url):
