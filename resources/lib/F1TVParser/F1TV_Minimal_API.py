@@ -1,10 +1,11 @@
 import AccountManager
 import json
+import xbmc
+import os
+import urllib
 
+from cache import Cache, conditional_headers
 
-''' General Entry point for F1TV API'''
-__TV_API__='https://f1tv-api.formula1.com/agl/1.0/gbr/en/all_devices/global/'
-__OLD_TV_API__='https://f1tv.formula1.com'
 
 ''' Parameters for different F1TV API calls'''
 __TV_API_PARAMS__ = {"event-occurrence": {"fields_to_expand": "image_urls,sessionoccurrence_urls,sessionoccurrence_urls__image_urls",
@@ -22,9 +23,54 @@ __TV_API_PARAMS__ = {"event-occurrence": {"fields_to_expand": "image_urls,sessio
                      }
 
 
-
 class F1TV_API:
     """ Main API Object - is used to retrieve API information """
+
+    def callAPI(self, endpoint, method="GET", api_ver=2, params=None, data=None):
+        if int(api_ver) == 1:
+            complete_url = 'https://f1tv.formula1.com' + endpoint
+        elif int(api_ver) == 2:
+            complete_url = 'https://f1tv-api.formula1.com/agl/1.0/gbr/en/all_devices/global/' + endpoint
+        else:
+            xbmc.log("Unable to make an API with invalid API version: {}".format(api_ver), xbmc.LOGERROR)
+            return
+
+        if method.upper() == 'GET':
+            # Check to see if we've cached the response
+            with Cache() as c:
+                if params:
+                    url_with_parameters = "{complete_url}?{parameters}".format(complete_url=complete_url,
+                                                                               parameters=urllib.urlencode(params))
+                else:
+                    url_with_parameters = complete_url
+                cached = c.get(url_with_parameters)
+                if cached:
+                    # If we have a fresh cached version, return it.
+                    if cached["fresh"]:
+                        return json.loads(cached["blob"])
+                    # otherwise append applicable "If-None-Match"/"If-Modified-Since" headers
+                    self.account_manager.getSession().headers.update(conditional_headers(cached))
+                # request a new version of the data
+                r = self.account_manager.getSession().get(complete_url, params=params, data=data)
+                if 200 == r.status_code:
+                    # add the new data and headers to the cache
+                    c.set(url_with_parameters, r.content, r.headers)
+                    return r.json()
+                if 304 == r.status_code:
+                    # the data hasn't been modified so just touch the cache with the new headers
+                    # and return the existing data
+                    c.touch(url_with_parameters, r.headers)
+                    return json.loads(cached["blob"])
+
+
+        elif method.upper() == 'POST':
+            r = self.account_manager.getSession().post(complete_url, params=params, data=data)
+            if r.ok:
+                return r.json()
+            else:
+                return
+        else:
+            return
 
     def getFields(self, url):
         for key in __TV_API_PARAMS__:
@@ -42,114 +88,63 @@ class F1TV_API:
     def getStream(self, url):
         """ Get stream for supplied viewings item
             This will get the m3u8 url for Content and Channel."""
-        complete_url = __OLD_TV_API__ + "/api/viewings/"
         item_dict = {"asset_url" if 'ass' in url else "channel_url": url}
 
-        viewing = self.account_manager.getSession().post(complete_url, data=json.dumps(item_dict))
+        viewing_json = self.callAPI("/api/viewings/", api_ver=1, method='POST', data=json.dumps(item_dict))
 
-        if viewing.ok:
-            viewing_json = viewing.json()
-            if 'chan' in url:
-                return viewing_json["tokenised_url"]
-            else:
-                return viewing_json["objects"][0]["tata"]["tokenised_url"]
+        if 'chan' in url:
+            return viewing_json["tokenised_url"]
+        else:
+            return viewing_json["objects"][0]["tata"]["tokenised_url"]
 
     def getSession(self, url):
         """ Get Session Object from API by supplying an url"""
-        complete_url = __TV_API__ + url
-        r = self.account_manager.getSession().get(complete_url, params=__TV_API_PARAMS__["session-occurrence"])
-
-        if r.ok:
-            return r.json()
+        session = self.callAPI(url, params=__TV_API_PARAMS__["session-occurrence"])
+        return session
 
 
     def getEvent(self, url, season = None):
         """ Get Event object from API by supplying an url"""
-        complete_url = __TV_API__ + url
-        r = self.account_manager.getSession().get(complete_url, params=__TV_API_PARAMS__["event-occurrence"])
-
-        if r.ok:
-            return r.json()
+        event = self.callAPI(url, params=__TV_API_PARAMS__["event-occurrence"])
+        return event
 
 
     def getSeason(self, url):
         """ Get Season object from API by supplying an url"""
-        complete_url = __OLD_TV_API__ + url
-        r = self.account_manager.getSession().get(complete_url, params=self.getFields(url)) #__TV_API_PARAMS__["season"])
-
-        if r.ok:
-            return r.json()
+        season = self.callAPI(url, api_ver=1, params=self.getFields(url))
+        return season
 
     def getSeasons(self):
         """ Get all season urls that are available at API"""
-        complete_url = __OLD_TV_API__ + "/api/race-season/"
-        r = self.account_manager.getSession().get(complete_url, params={'order': '-year'})
-
-        if r.ok:
-            return r.json()
+        seasons = self.callAPI("/api/race-season/", api_ver=1, params={'order': '-year'})
+        return seasons
 
     def getCircuits(self):
         """ Get all Circuit urls that are available at API"""
-        complete_url = __OLD_TV_API__ + "/api/circuit/"
-        r = self.account_manager.getSession().get(complete_url, params={"fields": "name,eventoccurrence_urls,self"})
-
-        if r.ok:
-            return r.json()
+        circuits = self.callAPI("/api/circuit/", api_ver=1, params={"fields": "name,eventoccurrence_urls,self"})
+        return circuits
 
     def getCircuit(self, url):
         """ Get Circuit object from API by supplying an url"""
-        complete_url = __OLD_TV_API__ + url
-        r = self.account_manager.getSession().get(complete_url, params=__TV_API_PARAMS__["circuit"])
-
-        if r.ok:
-            return r.json()
+        circuit = self.callAPI(url, api_ver=1, params=__TV_API_PARAMS__["circuit"])
+        return circuit
     
     def getF2(self):
-        complete_url = __TV_API__+"/api/sets/coll_4440e712d31d42fb95c9a2145ab4dac7"
-        r = self.account_manager.getSession().get(complete_url)
-        if r.ok:
-            return r.json()
-    
-    def getAnyURL(self, url):
-        complete_url = __TV_API__+url
-        r = self.account_manager.getSession().get(complete_url)
-        if r.ok:
-            return r.json()
-            
-    def getAnyOldURL(self, url):
-        complete_url = __OLD_TV_API__+url
-        r = self.account_manager.getSession().get(complete_url)
-        if r.ok:
-            return r.json()
+        f2 = self.callAPI("/api/sets/coll_4440e712d31d42fb95c9a2145ab4dac7")
+        return f2
     
     def getSets(self):
-        complete_url = __OLD_TV_API__ + "/api/sets/?slug=home"
-        r = self.account_manager.getSession().get(complete_url)
-        if r.ok:
-            rj = r.json()
+        sets = self.callAPI("/api/sets/?slug=home", api_ver=1)
         content = {}
-        for item in rj['objects'][0]['items']:
-            itemj = self.account_manager.getSession().get(__OLD_TV_API__+item['content_url']).json()
-            if 'title' in list(itemj):
-                content[itemj['title']] = item['content_url']
-            elif 'name' in list(itemj):
-                content[itemj['name']] = item['content_url']
+        for item in sets['objects'][0]['items']:
+            item_details = self.callAPI(item['content_url'], api_ver=1)
+            if 'title' in list(item_details):
+                content[item_details['title']] = item['content_url']
+            elif 'name' in list(item_details):
+                content[item_details['name']] = item['content_url']
             else:
-                content[itemj['UNKNOWN SET: ' + 'uid']] = item['content_url']
+                content[item_details['UNKNOWN SET: ' + 'uid']] = item['content_url']
         return content
-    
-    def getSetContent(self, url):
-        complete_url = __OLD_TV_API__ + url
-        r = self.account_manager.getSession().get(complete_url)
-        if r.ok:
-            return r.json()
-    
-    def getEpisode(self, url):
-        complete_url = __OLD_TV_API__ + url
-        r = self.account_manager.getSession().get(complete_url)
-        if r.ok:
-            return r.json()
-        
 
     def setLanguage(self, language):
         self.account_manager.session.headers['Accept-Language'] = "{}, en".format(language.upper())
