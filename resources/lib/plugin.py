@@ -47,10 +47,10 @@ def get_mainpage():
 
     #Get the current live event from sets - sometimes there is nothing live, easiest way to stop errors is to just try: except:
     try:
-        response = _api_manager.getAnyOldURL('/api/sets?slug=grand-prix-weekend-live')
+        response = _api_manager.callAPI('/api/sets?slug=grand-prix-weekend-live', api_ver=1)
         eventurl = response['objects'][0]['items'][0]['content_url'].replace("/api/","")
         #Get name for nice display
-        response = _api_manager.getAnyURL(eventurl)
+        response = _api_manager.callAPI(eventurl)
         eventname = "Current Event - "+response['name']
         list_item = xbmcgui.ListItem(label=eventname)
         url = get_url(action='list_sessions', event_url=eventurl, event_name=eventname)
@@ -86,8 +86,7 @@ def get_mainpage():
 
 
 def sets():
-    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
-    
+
     xbmcplugin.setPluginCategory(_handle, 'Sets')
     xbmcplugin.setContent(_handle, 'videos')
     
@@ -117,7 +116,7 @@ def sets():
             xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
         elif "/api/episodes" in sets[key]:
             #It's an episode.
-            epi_data = _api_manager.getEpisode(sets[key])
+            epi_data = _api_manager.callAPI(sets[key], api_ver=1)
             name = epi_data['title']
             asset = epi_data['items'][0]
             list_item = xbmcgui.ListItem(label=name)
@@ -133,15 +132,14 @@ def sets():
     xbmcplugin.endOfDirectory(_handle)
 
 def setContents(content_url):
-    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
     
-    set_content = _api_manager.getSetContent(content_url)
+    set_content = _api_manager.callAPI(content_url, api_ver=1)
     
     xbmcplugin.setPluginCategory(_handle, set_content['title'])
     xbmcplugin.setContent(_handle, 'videos')
     
     for item in set_content['items']:
-        epi_data = _api_manager.getEpisode(item['content_url'])
+        epi_data = _api_manager.callAPI(item['content_url'], api_ver=1)
         name = epi_data['title']
         asset = epi_data['items'][0]
         
@@ -159,8 +157,6 @@ def setContents(content_url):
     
 
 def list_seasons():
-
-    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
 
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
@@ -193,7 +189,6 @@ def list_seasons():
 
 
 def list_circuits():
-    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
 
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
@@ -211,7 +206,6 @@ def list_circuits():
             continue
         list_item = xbmcgui.ListItem(label=circuit['name'])
 
-        xbmc.log(fix_string(circuit['name']), xbmc.LOGNOTICE)
         list_item.setInfo('video', {'title': circuit['name'],
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
@@ -229,8 +223,6 @@ def list_circuits():
 
 def list_season_events(season_url, year):
 
-    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
-
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
     xbmcplugin.setPluginCategory(_handle, 'Season ' + str(year))
@@ -243,7 +235,6 @@ def list_season_events(season_url, year):
     round_counter = 1
 
     for event in season['eventoccurrence_urls']:
-        xbmc.log(str(event), xbmc.LOGNOTICE)
 
         if 'start_date' in event and event['start_date'] is not None:
             try:
@@ -288,8 +279,6 @@ def list_season_events(season_url, year):
 
 def list_circuit_events(circuit_url, circuit_name):
 
-    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
-
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
     xbmcplugin.setPluginCategory(_handle, circuit_name)
@@ -298,10 +287,8 @@ def list_circuit_events(circuit_url, circuit_name):
     xbmcplugin.setContent(_handle, 'videos')
     # Get video categories
     circuit = _api_manager.getCircuit(circuit_url)
-    xbmc.log(str(circuit), xbmc.LOGNOTICE)
 
     for event in circuit['eventoccurrence_urls']:
-        xbmc.log(str(event), xbmc.LOGNOTICE)
 
 
 
@@ -342,8 +329,6 @@ def list_circuit_events(circuit_url, circuit_name):
     xbmcplugin.endOfDirectory(_handle)
 
 def list_sessions(event_url, event_name):
-    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
-
 
     xbmc.log("{} - {}".format(event_name, event_url), xbmc.LOGINFO)
     # Set plugin category. It is displayed in some skins as the name
@@ -392,7 +377,6 @@ def list_sessions(event_url, event_name):
 
 
 def list_content(session_url, session_name):
-    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
 
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
@@ -420,7 +404,7 @@ def list_content(session_url, session_name):
                 thumb = image['url']
                 break
         # Create a list item with a text label and a thumbnail image.
-        channel = _api_manager.getAnyOldURL(channel)
+        channel = _api_manager.callAPI(channel, api_ver=1)
         name = channel['name'] if 'WIF' not in channel['name'] else session['session_name']
         list_item = xbmcgui.ListItem(label=name)
 
@@ -441,7 +425,7 @@ def list_content(session_url, session_name):
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
 
     for content in session['content_urls']:
-        content = _api_manager.getAnyOldURL(content)
+        content = _api_manager.callAPI(content, api_ver=1)
         thumb = ''
         for image in content['image_urls']:
             thumb = image
@@ -516,7 +500,6 @@ def getCorrectedM3U8(stream_url):
 
 
 def playContent(content_url):
-    _api_manager.login(_ADDON.getSetting("username"), _ADDON.getSetting("password"))
 
     stream_url = _api_manager.getStream(content_url)
 
@@ -576,6 +559,7 @@ def router(paramstring):
 
 
 def run():
+
 
     _api_manager.setLanguage(xbmc.getLanguage(format=xbmc.ISO_639_1))
 
