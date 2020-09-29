@@ -36,28 +36,16 @@ def get_url(**kwargs):
     """
     return '{0}?{1}'.format(_url, urlencode(kwargs))
 
-
-def get_seasons():
-    season_list = _api_manager.getSeasons()
-
-    return season_list
-
 def get_mainpage():
-
-
     #Get the current live event from sets - sometimes there is nothing live, easiest way to stop errors is to just try: except:
-    try:
-        response = _api_manager.callAPI('/api/sets?slug=grand-prix-weekend-live', api_ver=1)
-        eventurl = response['objects'][0]['items'][0]['content_url'].replace("/api/","")
+    event_uid = _api_manager.getLiveEvent()
+    if event_uid != None:
         #Get name for nice display
-        response = _api_manager.callAPI(eventurl)
-        eventname = "Current Event - "+response['name']
+        event = _api_manager.getEvent(event_uid)
+        eventname = "Current Event - "+event['name']
         list_item = xbmcgui.ListItem(label=eventname)
-        url = get_url(action='list_sessions', event_url=eventurl, event_name=eventname)
+        url = get_url(action='list_sessions', event_uid=event_uid, event_name=eventname)
         xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
-    except:
-        pass
-
 
     list_item = xbmcgui.ListItem(label="List by Season")
     url = get_url(action='list_seasons')
@@ -165,22 +153,22 @@ def list_seasons():
     # for this type of content.
     xbmcplugin.setContent(_handle, 'videos')
     # Get video categories
-    season_list = _api_manager.getSeasons()['objects']
+    season_list = _api_manager.getSeasons()
 
     for season in season_list:
-        season_url = season['self']
+        season_uid = season['uid']
 
-        list_item = xbmcgui.ListItem(label=season['name'])
+        list_item = xbmcgui.ListItem(label=str(season['year']))
 
-        list_item.setInfo('video', {'title': season['name'],
+        list_item.setInfo('video', {'title': str(season['year']),
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
 
-        url = get_url(action='list_season_events', season=season_url, year=season['name'])
+        url = get_url(action='list_season_events', season=season_uid, year=season['year'])
 
         is_folder = True
         # Add our item to the Kodi virtual folder listing if the season is not in the future
-        if int(season['name'][:4]) <= datetime.now().year:
+        if int(season['year']) <= datetime.now().year:
             xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
@@ -221,7 +209,7 @@ def list_circuits():
     xbmcplugin.endOfDirectory(_handle)
 
 
-def list_season_events(season_url, year):
+def list_season_events(season_uid, year):
 
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
@@ -230,11 +218,11 @@ def list_season_events(season_url, year):
     # for this type of content.
     xbmcplugin.setContent(_handle, 'videos')
     # Get video categories
-    season = _api_manager.getSeason(season_url)
-
+    season = _api_manager.getSeason(season_uid)
     round_counter = 1
 
-    for event in season['eventoccurrence_urls']:
+    for event in season:
+        event = _api_manager.getEventMetadata(event['uid'])
 
         if 'start_date' in event and event['start_date'] is not None:
             try:
@@ -263,7 +251,7 @@ def list_season_events(season_url, year):
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
 
-        url = get_url(action='list_sessions', event_url=event['self'].replace("/api/",""), event_name=event['name'])
+        url = get_url(action='list_sessions', event_uid=event['uid'], event_name=event['name'])
 
         is_folder = True
         # Add our item to the Kodi virtual folder listing.
@@ -315,8 +303,8 @@ def list_circuit_events(circuit_url, circuit_name):
         list_item.setInfo('video', {'title': event['official_name'],
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
-
-        url = get_url(action='list_sessions', event_url=event['self'].replace("/api/", ""), event_name=event['name'])
+        event_uid=event['self'].split('/')[3]
+        url = get_url(action='list_sessions', event_uid=event_uid, event_name=event['name'])
 
         is_folder = True
         # Add our item to the Kodi virtual folder listing.
@@ -328,9 +316,9 @@ def list_circuit_events(circuit_url, circuit_name):
     # Finish creating a virtual folder.
     xbmcplugin.endOfDirectory(_handle)
 
-def list_sessions(event_url, event_name):
+def list_sessions(event_uid, event_name):
 
-    xbmc.log("{} - {}".format(event_name, event_url), xbmc.LOGINFO)
+    xbmc.log("{} - {}".format(event_name, event_uid), xbmc.LOGINFO)
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
     xbmcplugin.setPluginCategory(_handle, event_name)
@@ -338,10 +326,11 @@ def list_sessions(event_url, event_name):
     # for this type of content.
     xbmcplugin.setContent(_handle, 'videos')
     # Get video categories
-    event = _api_manager.getEvent(event_url)
+    event = _api_manager.getEvent(event_uid)
 
-    for session in event['sessionoccurrence_urls']:
-
+    for session_url in event['sessionoccurrence_urls']:
+        session_uid = session_url.split('/')[3]
+        session = _api_manager.getSessionMetadata(session_uid)
         #if session['available_for_user'] is False and len(session['content_urls']) == 0:
         #    continue
 
@@ -362,7 +351,7 @@ def list_sessions(event_url, event_name):
                                     'genre': "Motorsport",
                                     'mediatype': 'video'})
 
-        url = get_url(action='list_content', session_url=session['self'].replace("/api/",""), session_name=session['name'])
+        url = get_url(action='list_content', session_uid=session['uid'], session_name=session['name'])
 
         is_folder = True
 
@@ -376,7 +365,7 @@ def list_sessions(event_url, event_name):
     xbmcplugin.endOfDirectory(_handle)
 
 
-def list_content(session_url, session_name):
+def list_content(session_uid, session_name):
 
     # Set plugin category. It is displayed in some skins as the name
     # of the current section.
@@ -385,26 +374,25 @@ def list_content(session_url, session_name):
     # for this type of content.
     xbmcplugin.setContent(_handle, 'videos')
     # Get video categories
-    session = _api_manager.getSession(session_url)
-    print(session)
+    session = _api_manager.getSessionMetadata(session_uid)
 
-    for channel in session['channel_urls']:
-
+    for channel_url in session['channel_urls']:
+        channel_uid = channel_url.split('/')[3]
+        # Create a list item with a text label and a thumbnail image.
+        channel = _api_manager.getChannelMetadata(channel_uid)
         thumb = ''
-        try:
-            if len(channel['driver_urls']) > 0:
-                for image in channel['driver_urls'][0]['image_urls']:
-                    if image['type'] == 'Headshot':
-                        thumb = image['url']
-                        break
-        except:
-            pass
         for image in session['image_urls']:
             if image['type'] == 'Thumbnail':
                 thumb = image['url']
                 break
-        # Create a list item with a text label and a thumbnail image.
-        channel = _api_manager.callAPI(channel, api_ver=1)
+        try:
+            if 'image_urls' in channel['driveroccurrence_urls'][0]:
+                for image in channel['driveroccurrence_urls'][0]['image_urls']:
+                    if image['image_type'] == 'Headshot':
+                        thumb = image['url']
+                        break
+        except:
+            pass
         name = channel['name'] if 'WIF' not in channel['name'] else session['session_name']
         list_item = xbmcgui.ListItem(label=name)
 
@@ -424,11 +412,12 @@ def list_content(session_url, session_name):
         # Add our item to the Kodi virtual folder listing.
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
 
-    for content in session['content_urls']:
-        content = _api_manager.callAPI(content, api_ver=1)
+    for content_url in session['content_urls']:
+        content_uid = content_url.split('/')[3]
+        content = _api_manager.getContentMetadata(content_uid)
         thumb = ''
         for image in content['image_urls']:
-            thumb = image
+            thumb = image['url']
             break
         # Create a list item with a text label and a thumbnail image.
         list_item = xbmcgui.ListItem(label=content['title'])
@@ -442,9 +431,10 @@ def list_content(session_url, session_name):
                                     'mediatype': 'video'})
 
         list_item.setProperty('IsPlayable', 'true')
-
-        if len(content['items']) > 0:
-            url = get_url(action='playContent', content_url=content['items'][0])
+        content_slug=content['slug']
+        extended_content = _api_manager.getContentExtendedMetadata(content_slug)
+        if len(extended_content['items']) > 0:
+            url = get_url(action='playContent', content_url=extended_content['items'][0]['self'])
 
             is_folder = False
             # Add our item to the Kodi virtual folder listing.
@@ -539,10 +529,10 @@ def router(paramstring):
             list_circuit_events(params['circuit'], params['name'])
         elif params['action'] == 'list_sessions':
             # Play a video from a provided URL.
-            list_sessions(params['event_url'], params['event_name'])
+            list_sessions(params['event_uid'], params['event_name'])
         elif params['action'] == 'list_content':
             # Play a video from a provided URL.
-            list_content(params['session_url'], params['session_name'])
+            list_content(params['session_uid'], params['session_name'])
         elif params['action'] == 'playContent':
             playContent(params['content_url'])
         elif params['action'] == 'settings':

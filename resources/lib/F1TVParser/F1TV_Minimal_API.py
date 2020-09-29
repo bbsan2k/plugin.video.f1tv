@@ -3,6 +3,8 @@ import json
 import xbmc
 import os
 import urllib
+import time
+from datetime import datetime
 
 from cache import Cache, conditional_headers
 
@@ -30,6 +32,7 @@ class F1TV_API:
         if int(api_ver) == 1:
             complete_url = 'https://f1tv.formula1.com' + endpoint
         elif int(api_ver) == 2:
+            #complete_url = 'https://f1tv-api.formula1.com/agl/1.0/deu/en/all_devices/global/' + endpoint
             complete_url = 'https://f1tv-api.formula1.com/agl/1.0/gbr/en/all_devices/global/' + endpoint
         else:
             xbmc.log("Unable to make an API with invalid API version: {}".format(api_ver), xbmc.LOGERROR)
@@ -102,22 +105,59 @@ class F1TV_API:
         session = self.callAPI(url, params=__TV_API_PARAMS__["session-occurrence"])
         return session
 
+    def getSessionMetadata(self,session_uid):
+        """ Get Session Object from API by supplying uid """
+        session = self.callAPI("session-occurrence/{}/archive".format(session_uid))
+        return session
 
-    def getEvent(self, url, season = None):
-        """ Get Event object from API by supplying an url"""
-        event = self.callAPI(url, params=__TV_API_PARAMS__["event-occurrence"])
+    def getEvent(self, event_uid, season = None):
+        """ Get Event object from API by supplying event_uid"""
+        event = self.callAPI("video-collection/{}/sessions".format(event_uid))
         return event
 
+    def getLiveEvent(self):
+        """ Returns event_uid from API"""
+        elements = self.callAPI("home")['objects'][0]['items']
+        for element in elements:
+            if 'set_type_slug' in element['content_url']:
+                if element['content_url']['set_type_slug'] == 'grand-prix-header':
+                    return element['content_url']['items'][0]['content_url']['uid']
+        return None
 
-    def getSeason(self, url):
+    def getSeason(self, year_uid):
         """ Get Season object from API by supplying an url"""
-        season = self.callAPI(url, api_ver=1, params=self.getFields(url))
-        return season
+        params={
+            "race_season_url":year_uid
+        }
+        season = self.callAPI("archive", params=params)
+        return season['objects']
+
+    def getChannelMetadata(self,channel_uid):
+        """ Get Channel object from API by supplying uid"""
+        channel = self.callAPI("channels/{}".format(channel_uid))
+        return channel
+
+    def getContentMetadata(self,content_uid):
+        """ Get Content object from API by supplying uid"""
+        content = self.callAPI("episodes/{}".format(content_uid))
+        return content
+
+    def getContentExtendedMetadata(self,slug):
+        """ Get extended content object from API by supplying uid"""
+        extended_content = self.callAPI("episodes/{}/playback".format(slug))
+        return extended_content['objects'][0]
+
+    def getEventMetadata(self,event_uid):
+        """ Get Event object from API by supplying event_uid"""
+        event = self.callAPI("event-occurrence/{}/".format(event_uid))
+        return event
 
     def getSeasons(self):
         """ Get all season urls that are available at API"""
-        seasons = self.callAPI("/api/race-season/", api_ver=1, params={'order': '-year'})
-        return seasons
+        now = datetime.now()
+        current_year = now.year
+        seasons = self.callAPI("archive-filters/{}".format(current_year+1))
+        return seasons['objects']
 
     def getCircuits(self):
         """ Get all Circuit urls that are available at API"""
