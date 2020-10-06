@@ -5,6 +5,7 @@ import os
 import urllib
 import time
 from datetime import datetime
+import locale
 
 from cache import Cache, conditional_headers
 
@@ -43,6 +44,7 @@ class F1TV_API:
     """ Main API Object - is used to retrieve API information """
 
     def callAPI(self, endpoint, method="GET", api_ver=2, params=None, data=None):
+        locale.setlocale(locale.LC_ALL, 'en_US')
         if int(api_ver) == 1:
             complete_url = 'https://f1tv.formula1.com' + endpoint
         elif int(api_ver) == 2:
