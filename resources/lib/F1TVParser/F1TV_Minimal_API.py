@@ -195,20 +195,5 @@ class F1TV_API:
     def getSets(self):
         return self.callAPI(__TV_API_ENDPOINTS__['home'])['objects'][0]['items']
         
-
-    #
-    #def getSets(self):
-    #    sets = self.callAPI("/api/sets/?slug=home", api_ver=1)
-    #    content = {}
-    #    for item in sets['objects'][0]['items']:
-    #        item_details = self.callAPI(item['content_url'], api_ver=1)
-    #        if 'title' in list(item_details):
-    #            content[item_details['title']] = item['content_url']
-    #       elif 'name' in list(item_details):
-    #            content[item_details['name']] = item['content_url']
-    #        else:
-    #            content[item_details['UNKNOWN SET: ' + 'uid']] = item['content_url']
-    #    return content
-
     def setLanguage(self, language):
         self.account_manager.session.headers['Accept-Language'] = "{}, en".format(language.upper())
