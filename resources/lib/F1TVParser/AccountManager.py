@@ -9,8 +9,10 @@ from cache import Store
 
 from datetime import datetime
 
-__ACCOUNT_API__='https://api.formula1.com/v1/account/'
-__ACCOUNT_CREATE_SESSION__=__ACCOUNT_API__+'Subscriber/CreateSession'
+# __ACCOUNT_API__='https://api.formula1.com/v1/account/'
+# __ACCOUNT_CREATE_SESSION__=__ACCOUNT_API__+'Subscriber/CreateSession'
+__ACCOUNT_API__='https://api.formula1.com/v2/account/'
+__ACCOUNT_CREATE_SESSION__=__ACCOUNT_API__+'subscriber/authenticate/by-password'
 
 __HEADER_CD_LANGUAGE__='de-DE'
 
