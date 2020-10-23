@@ -44,7 +44,7 @@ class F1TV_API:
     """ Main API Object - is used to retrieve API information """
 
     def callAPI(self, endpoint, method="GET", api_ver=2, params=None, data=None):
-        locale.setlocale(locale.LC_ALL, 'en_US')
+     #   locale.setlocale(locale.LC_ALL, 'en_US')
         if int(api_ver) == 1:
             complete_url = 'https://f1tv.formula1.com' + endpoint
         elif int(api_ver) == 2:
@@ -103,7 +103,7 @@ class F1TV_API:
     def login(self, username, password):
         """ Log in with supplied credentials."""
         return self.account_manager.login(username, password)
-   
+
     def getEpisodeStream(self,asset_url):
         """ Get M3U8 URL for Episode """
         post_data = {
@@ -187,13 +187,13 @@ class F1TV_API:
         """ Get Circuit object from API by supplying an url"""
         circuit = self.callAPI(url, api_ver=1, params=__TV_API_PARAMS__["circuit"])
         return circuit
-    
+
     def getF2(self):
         f2 = self.callAPI("/api/sets/coll_4440e712d31d42fb95c9a2145ab4dac7")
         return f2
 
     def getSets(self):
         return self.callAPI(__TV_API_ENDPOINTS__['home'])['objects'][0]['items']
-        
+
     def setLanguage(self, language):
         self.account_manager.session.headers['Accept-Language'] = "{}, en".format(language.upper())
