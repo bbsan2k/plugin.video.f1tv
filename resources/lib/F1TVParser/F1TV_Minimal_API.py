@@ -3,6 +3,9 @@ import json
 import xbmc
 import os
 import urllib
+import time
+from datetime import datetime
+import locale
 
 from cache import Cache, conditional_headers
 
@@ -22,14 +25,30 @@ __TV_API_PARAMS__ = {"event-occurrence": {"fields_to_expand": "image_urls,sessio
                                 "fields_to_expand": "eventoccurrence_urls,eventoccurrence_urls__image_urls"}
                      }
 
+__TV_API_ENDPOINTS__ = {
+    "home":"home",
+    "seasons":"archive-filters/{year}",
+    "season":"archive",
+    "event":"video-collection/{event_uid}/sessions",
+    "event_metadata":"event-occurrence/{event_uid}/",
+    "session":"session-occurrence/{session_uid}/archive",
+    "channel":"channels/{channel_uid}",
+    "episode":"episodes/{episode_uid}",
+    "episode_playback":"episodes/{episode_slug}/playback",
+    "video-set":"video-set/{set_uid}",
+    "viewings":"/api/viewings"
+}
+
 
 class F1TV_API:
     """ Main API Object - is used to retrieve API information """
 
     def callAPI(self, endpoint, method="GET", api_ver=2, params=None, data=None):
+     #   locale.setlocale(locale.LC_ALL, 'en_US')
         if int(api_ver) == 1:
             complete_url = 'https://f1tv.formula1.com' + endpoint
         elif int(api_ver) == 2:
+            #complete_url = 'https://f1tv-api.formula1.com/agl/1.0/deu/en/all_devices/global/' + endpoint
             complete_url = 'https://f1tv-api.formula1.com/agl/1.0/gbr/en/all_devices/global/' + endpoint
         else:
             xbmc.log("Unable to make an API with invalid API version: {}".format(api_ver), xbmc.LOGERROR)
@@ -85,39 +104,79 @@ class F1TV_API:
         """ Log in with supplied credentials."""
         return self.account_manager.login(username, password)
 
-    def getStream(self, url):
-        """ Get stream for supplied viewings item
-            This will get the m3u8 url for Content and Channel."""
-        item_dict = {"asset_url" if 'ass' in url else "channel_url": url}
+    def getEpisodeStream(self,asset_url):
+        """ Get M3U8 URL for Episode """
+        post_data = {
+            "asset_url":asset_url
+        }
+        viewing_json = self.callAPI(__TV_API_ENDPOINTS__['viewings'], api_ver=1, method='POST', data=json.dumps(post_data))
+        return viewing_json["objects"][0]["tata"]["tokenised_url"]
 
-        viewing_json = self.callAPI("/api/viewings/", api_ver=1, method='POST', data=json.dumps(item_dict))
+    def getChannelStream(self,channel_url):
+        post_data = {
+            "channel_url":channel_url
+        }
+        viewing_json = self.callAPI(__TV_API_ENDPOINTS__['viewings'], api_ver=1, method='POST', data=json.dumps(post_data))
+        return viewing_json["tokenised_url"]
 
-        if 'chan' in url:
-            return viewing_json["tokenised_url"]
-        else:
-            return viewing_json["objects"][0]["tata"]["tokenised_url"]
-
-    def getSession(self, url):
-        """ Get Session Object from API by supplying an url"""
-        session = self.callAPI(url, params=__TV_API_PARAMS__["session-occurrence"])
+    def getSessionMetadata(self,session_uid):
+        """ Get Session Object from API by supplying uid """
+        session = self.callAPI(__TV_API_ENDPOINTS__['session'].format(session_uid=session_uid))
         return session
 
-
-    def getEvent(self, url, season = None):
-        """ Get Event object from API by supplying an url"""
-        event = self.callAPI(url, params=__TV_API_PARAMS__["event-occurrence"])
+    def getEvent(self, event_uid):
+        """ Get Event object from API by supplying event_uid"""
+        event = self.callAPI(__TV_API_ENDPOINTS__['event'].format(event_uid=event_uid))
         return event
 
+    def getLiveEvent(self):
+        """ Returns event_uid from API"""
+        elements = self.callAPI("home")['objects'][0]['items']
+        for element in elements:
+            if 'set_type_slug' in element['content_url']:
+                if element['content_url']['set_type_slug'] == 'grand-prix-header':
+                    return element['content_url']['items'][0]['content_url']['uid']
+        return None
 
-    def getSeason(self, url):
+    def getSetMetadata(self,set_uid):
+        """ Return Video-Set Object from API by supplying set_uid """
+        return self.callAPI(__TV_API_ENDPOINTS__['video-set'].format(set_uid=set_uid))
+
+    def getSeason(self, year_uid):
         """ Get Season object from API by supplying an url"""
-        season = self.callAPI(url, api_ver=1, params=self.getFields(url))
-        return season
+        params={
+            "race_season_url":year_uid
+        }
+        season = self.callAPI(__TV_API_ENDPOINTS__['season'], params=params)
+        return season['objects']
+
+    def getChannelMetadata(self,channel_uid):
+        """ Get Channel object from API by supplying uid"""
+        channel = self.callAPI(__TV_API_ENDPOINTS__['channel'].format(channel_uid=channel_uid))
+        return channel
+
+    def getEpisodeMetadata(self,episode_uid):
+        """ Get Content object from API by supplying uid"""
+        episode = self.callAPI(__TV_API_ENDPOINTS__['episode'].format(episode_uid=episode_uid))
+        return episode
+
+    def getEpisodePlaybackData(self,slug):
+        """ Get extended content object from API by supplying uid"""
+        episode_playback = self.callAPI(__TV_API_ENDPOINTS__['episode_playback'].format(episode_slug=slug))
+        return episode_playback['objects'][0]
+
+    def getEventMetadata(self,event_uid):
+        """ Get Event object from API by supplying event_uid"""
+        event = self.callAPI(__TV_API_ENDPOINTS__['event_metadata'].format(event_uid=event_uid))
+        return event
 
     def getSeasons(self):
         """ Get all season urls that are available at API"""
-        seasons = self.callAPI("/api/race-season/", api_ver=1, params={'order': '-year'})
-        return seasons
+        #test with macOS
+        now = datetime.now()
+        current_year = now.year
+        seasons = self.callAPI(__TV_API_ENDPOINTS__['seasons'].format(year=current_year+1))
+        return seasons['objects']
 
     def getCircuits(self):
         """ Get all Circuit urls that are available at API"""
@@ -128,23 +187,13 @@ class F1TV_API:
         """ Get Circuit object from API by supplying an url"""
         circuit = self.callAPI(url, api_ver=1, params=__TV_API_PARAMS__["circuit"])
         return circuit
-    
+
     def getF2(self):
         f2 = self.callAPI("/api/sets/coll_4440e712d31d42fb95c9a2145ab4dac7")
         return f2
-    
+
     def getSets(self):
-        sets = self.callAPI("/api/sets/?slug=home", api_ver=1)
-        content = {}
-        for item in sets['objects'][0]['items']:
-            item_details = self.callAPI(item['content_url'], api_ver=1)
-            if 'title' in list(item_details):
-                content[item_details['title']] = item['content_url']
-            elif 'name' in list(item_details):
-                content[item_details['name']] = item['content_url']
-            else:
-                content[item_details['UNKNOWN SET: ' + 'uid']] = item['content_url']
-        return content
+        return self.callAPI(__TV_API_ENDPOINTS__['home'])['objects'][0]['items']
 
     def setLanguage(self, language):
         self.account_manager.session.headers['Accept-Language'] = "{}, en".format(language.upper())
