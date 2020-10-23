@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.f1tv" name="F1TV Kodi Plugin" version="0.1.4" provider-name="BBsan2k, TheDevFreak, and HypnOS HAXX0R">
+<addon id="plugin.video.f1tv" name="F1TV Kodi Plugin" version="0.1.5" provider-name="BBsan2k, TheDevFreak, HypnOS HAXX0R, lage2104">
     <requires>
         <import addon="xbmc.python" version="2.25.0"/>
         <import addon="script.module.routing" version="0.2.0"/>
