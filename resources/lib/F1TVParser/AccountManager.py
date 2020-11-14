@@ -152,6 +152,7 @@ class AccountManager:
     def setSessionData(self, apikey, system_id):
         self.auth_headers['apikey'] = apikey
         self.auth_headers['cd-systemid'] = system_id
+        self.auth_headers['User-Agent'] = "RaceControl"
 
     def login(self, username, password):
         self.username = username
