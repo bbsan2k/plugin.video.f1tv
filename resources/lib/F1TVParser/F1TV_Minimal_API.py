@@ -1,4 +1,4 @@
-import AccountManager
+from .AccountManager import AccountManager
 import json
 import xbmc
 import os
@@ -6,6 +6,7 @@ import urllib
 import time
 from datetime import datetime
 import locale
+from urllib.parse import urlencode
 
 from cache import Cache, conditional_headers
 
@@ -59,7 +60,7 @@ class F1TV_API:
             with Cache() as c:
                 if params:
                     url_with_parameters = "{complete_url}?{parameters}".format(complete_url=complete_url,
-                                                                               parameters=urllib.urlencode(params))
+                                                                               parameters=urlencode(params))
                 else:
                     url_with_parameters = complete_url
                 cached = c.get(url_with_parameters)
@@ -98,7 +99,7 @@ class F1TV_API:
 
     def __init__(self):
         """ Initialize by creating AccountManager object"""
-        self.account_manager = AccountManager.AccountManager()
+        self.account_manager = AccountManager()
 
     def login(self, username, password):
         """ Log in with supplied credentials."""

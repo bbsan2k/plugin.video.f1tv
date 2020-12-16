@@ -1,13 +1,14 @@
 
 
 import sys
-from urllib import urlencode
-from urlparse import parse_qsl
-from urlparse import urlparse
+from urllib.parse import urlencode
+from urllib.parse import parse_qsl
+from urllib.parse import urlparse
 import xbmcgui
 import xbmcaddon
 import xbmcplugin
 import xbmc
+import xbmcvfs
 from resources.lib.F1TVParser.F1TV_Minimal_API import F1TV_API
 from datetime import datetime
 import time
@@ -407,12 +408,15 @@ def getCorrectedM3U8(stream_url):
         if 'm3u8' not in component:
             sub_path += component + '/'
     base_url = '{}://{}{}'.format(parts.scheme, parts.netloc, sub_path)
-
-    path = '{}{}'.format(xbmc.translatePath('special://temp'), 'fixed_stream.m3u8')
+    path = ''
+    try:
+        path = '{}{}'.format(xbmcvfs.translatePath('special://temp'), 'fixed_stream.m3u8')
+    except AttributeError:
+        path = '{}{}'.format(xbmc.translatePath('special://temp'), 'fixed_stream.m3u8')
 
     out_file = open(path, 'w+')
     if r.ok:
-        if 'audio-aacl' in r.content:
+        if 'audio-aacl' in r.text:
             try:
                 for line in r.content.splitlines():
                     out_line = ''
@@ -433,7 +437,7 @@ def getCorrectedM3U8(stream_url):
                 xbmc.log('Malformatted M3U8')
         else:
             path = stream_url
-        xbmc.log(r.content, xbmc.LOGDEBUG)
+        xbmc.log(r.text, xbmc.LOGDEBUG)
 
     out_file.close()
 
