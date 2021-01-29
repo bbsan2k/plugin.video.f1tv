@@ -26,6 +26,7 @@ class AccountManager:
         if r.ok:
             in_constants = False
             for line in r.content.splitlines():
+                line = line.decode('utf-8')
                 if 'var ENV_CONST' in line:
                     in_constants = True
                     continue
