@@ -1,9 +1,5 @@
-
-
 import sys
-from urllib.parse import urlencode
-from urllib.parse import parse_qsl
-from urllib.parse import urlparse
+from urllib.parse import urlencode, parse_qsl, urlparse
 import xbmcgui
 import xbmcaddon
 import xbmcplugin
@@ -13,6 +9,7 @@ from resources.lib.F1TVParser.F1TV_Minimal_API import F1TV_API
 from datetime import datetime
 import time
 import requests
+import requests_cache
 import re
 
 
@@ -400,7 +397,8 @@ def list_session_content(session_uid, session_name):
 
 
 def getCorrectedM3U8(stream_url):
-    r = requests.get(stream_url)
+    with requests_cache.disabled():
+        r = requests.get(stream_url)
     parts = urlparse(stream_url)
 
     sub_path = ''
@@ -408,6 +406,7 @@ def getCorrectedM3U8(stream_url):
         if 'm3u8' not in component:
             sub_path += component + '/'
     base_url = '{}://{}{}'.format(parts.scheme, parts.netloc, sub_path)
+
     path = ''
     try:
         path = '{}{}'.format(xbmcvfs.translatePath('special://temp'), 'fixed_stream.m3u8')
@@ -525,8 +524,8 @@ def run():
         xbmc.log(xbmc.getLanguage(format=xbmc.ISO_639_1), xbmc.LOGERROR)
     except ValueError as error:
 
-        response = xbmcgui.Dialog().yesno('Login not possible.', error.message, 'Enter Settings?',nolabel='Exit', yeslabel='Settings')
-        xbmc.log(error.message, xbmc.LOGERROR)
+        response = xbmcgui.Dialog().yesno('Login not possible.', str(error) + 'Enter Settings?',nolabel='Exit', yeslabel='Settings')
+        xbmc.log(str(error), xbmc.LOGERROR)
         if response:
             _ADDON.openSettings()
 
