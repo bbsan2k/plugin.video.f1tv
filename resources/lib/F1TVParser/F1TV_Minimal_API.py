@@ -48,6 +48,16 @@ __TV_API_ENDPOINTS__ = {
 class F1TV_API:
     """ Main API Object - is used to retrieve API information """
 
+    def getMainPage(self):
+        mainpage_data = self.account_manager.getSession().get(f"{self.f1tvapi}ALL/MENU/F1_TV_Pro_Annual/14")
+        if mainpage_data.ok:
+            return mainpage_data.json()
+    
+    def getPage(self, page_id):
+        page_data = self.account_manager.getSession().get(f"{self.f1tvapi}ALL/PAGE/{page_id}/F1_TV_Pro_Annual/14")
+        if page_data.ok:
+            return page_data.json()
+
     def callAPI(self, endpoint, method="GET", api_ver=2, params=None, data=None):
      #   locale.setlocale(locale.LC_ALL, 'en_US')
         if int(api_ver) == 1:
@@ -93,6 +103,7 @@ class F1TV_API:
         """ Initialize by creating AccountManager object"""
         self.cache = StorageServer.StorageServer("plugin.video.f1tv", 175316)
         self.account_manager = AccountManager.AccountManager()
+        self.f1tvapi = "https://f1tv.formula1.com/2.0/R/ENG/BIG_SCREEN_HLS/"
 
     def login(self, username, password):
         """ Log in with supplied credentials."""
