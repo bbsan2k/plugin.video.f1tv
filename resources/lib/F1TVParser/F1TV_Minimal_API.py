@@ -1,4 +1,4 @@
-from .AccountManager import AccountManager
+from . import AccountManager
 import json
 import xbmc
 import os
@@ -6,9 +6,13 @@ import urllib
 import time
 from datetime import datetime
 import locale
-from urllib.parse import urlencode
 
-from cache import Cache, conditional_headers
+#Cache module
+try:
+    import StorageServer
+except:
+    import storageserverdummy as StorageServer
+
 
 
 ''' Parameters for different F1TV API calls'''
@@ -56,31 +60,19 @@ class F1TV_API:
             return
 
         if method.upper() == 'GET':
-            # Check to see if we've cached the response
-            with Cache() as c:
-                if params:
-                    url_with_parameters = "{complete_url}?{parameters}".format(complete_url=complete_url,
-                                                                               parameters=urlencode(params))
-                else:
-                    url_with_parameters = complete_url
-                cached = c.get(url_with_parameters)
-                if cached:
-                    # If we have a fresh cached version, return it.
-                    if cached["fresh"]:
-                        return json.loads(cached["blob"])
-                    # otherwise append applicable "If-None-Match"/"If-Modified-Since" headers
-                    self.account_manager.getSession().headers.update(conditional_headers(cached))
-                # request a new version of the data
-                r = self.account_manager.getSession().get(complete_url, params=params, data=data)
-                if 200 == r.status_code:
-                    # add the new data and headers to the cache
-                    c.set(url_with_parameters, r.content, r.headers)
-                    return r.json()
-                if 304 == r.status_code:
-                    # the data hasn't been modified so just touch the cache with the new headers
-                    # and return the existing data
-                    c.touch(url_with_parameters, r.headers)
-                    return json.loads(cached["blob"])
+            
+            if params:
+                url_with_parameters = "{complete_url}?{parameters}".format(complete_url=complete_url,
+                                                                           parameters=urllib.urlencode(params))
+            else:
+                url_with_parameters = complete_url
+            # request a new version of the data (automatically cached by AccountManager module)
+            r = self.account_manager.getSession().get(complete_url, params=params, data=data)
+            if 200 == r.status_code:
+                # add the new data and headers to the cache
+                return r.json()
+            if 304 == r.status_code:
+                return None
 
 
         elif method.upper() == 'POST':
@@ -99,7 +91,8 @@ class F1TV_API:
 
     def __init__(self):
         """ Initialize by creating AccountManager object"""
-        self.account_manager = AccountManager()
+        self.cache = StorageServer.StorageServer("plugin.video.f1tv", 175316)
+        self.account_manager = AccountManager.AccountManager()
 
     def login(self, username, password):
         """ Log in with supplied credentials."""
