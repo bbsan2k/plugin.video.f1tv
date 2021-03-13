@@ -116,12 +116,16 @@ class AccountManager:
     def __init__(self):
         self.cache = StorageServer.StorageServer("plugin.video.f1tv", 175316)
         self.auth_data = {"cd-systemid": "0"}
+        self.session = requests.session()
+        #Scrape down the API Key
+        f1_account_script_data = self.session.get("https://account.formula1.com/scripts/main.min.js")
+        #Extract the apiKey with regex
+        api_key = re.findall('apikey: *"(.*?)"', f1_account_script_data.text)[0]
         self.auth_headers = {"Content-Type": "application/json",
-                             "apikey": "0DmcHt5ynA4i1Q7AYFdS2NZ51IRCaocT",
+                             "apikey": api_key,
                              "CD-DeviceType": '16',
                              "CD-DistributionChannel": __HEADER_CD_DIST_CHANNEL__,
                              'User-Agent': 'okhttp/3.14.2'}
-        self.session = requests.session()
         #3 second cache for all requests
         requests_cache.install_cache(expire_after=3)
         self.session_token = None
