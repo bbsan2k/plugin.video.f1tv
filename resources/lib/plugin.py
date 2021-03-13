@@ -35,40 +35,28 @@ def get_url(**kwargs):
     return '{0}?{1}'.format(_url, urlencode(kwargs))
 
 def get_mainpage():
-    #Get the current live event from sets - sometimes there is nothing live, easiest way to stop errors is to just try: except:
-    event_uid = _api_manager.getLiveEvent()
-    if event_uid != None:
-        #Get name for nice display
-        event = _api_manager.getEvent(event_uid=event_uid)
-        eventname = "Current Event - {name}".format(name=event['name'])
-        list_item = xbmcgui.ListItem(label=eventname)
-        url = get_url(action='list_sessions', event_uid=event_uid, event_name=eventname)
-        xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
 
-    list_item = xbmcgui.ListItem(label="List by Season")
-    url = get_url(action='list_seasons')
-
-    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
-
-    list_item = xbmcgui.ListItem(label="List by Circuit")
-    url = get_url(action='list_circuits')
-
-    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    mainpage_data = _api_manager.getMainPage()
+    #Check that there are results
+    if "resultObj" in mainpage_data:
+        #Iterate over front page entries and add them to the menu
+        for container in mainpage_data['resultObj']['containers']:
+            label = container['metadata']['label']
+            target_type = container['actions'][0]['targetType']
+            uri = container['actions'][0]['uri']
+            list_item = xbmcgui.ListItem(label=label)
+            url = get_url(action=target_type, uri=uri, label=label)
+            xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
     
-    list_item = xbmcgui.ListItem(label="Sets")
-    url = get_url(action='list_sets')
-    
-    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)    
-
-    list_item = xbmcgui.ListItem(label="Settings")
-    url = get_url(action='settings')
-
-    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
-
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
     # Finish creating a virtual folder.
     xbmcplugin.endOfDirectory(_handle)
+
+def f1tv_page(uri):
+    #Get page id from uri
+    page_id = uri.split("PAGE/")[1].split("/")[0]
+    page_data = _api_manager.getPage(page_id)
 
 def list_sets():
     xbmcplugin.setPluginCategory(_handle, 'Sets')
@@ -470,9 +458,9 @@ def router(paramstring):
     params = dict(parse_qsl(paramstring))
     # Check the parameters passed to the plugin
     if params:
-        if params['action'] == 'list_seasons':
-            # List all seasons
-            list_seasons()
+        if params['action'] == 'PAGE':
+            # F1TV Page Activity
+            f1tv_page(params['uri'])
         elif params['action'] == 'list_circuits':
             # List all seasons
             list_circuits()
