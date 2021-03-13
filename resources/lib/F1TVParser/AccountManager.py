@@ -115,7 +115,7 @@ class AccountManager:
 
     def __init__(self):
         self.cache = StorageServer.StorageServer("plugin.video.f1tv", 175316)
-        self.auth_data = {}
+        self.auth_data = {"cd-systemid": "0"}
         self.auth_headers = {"Content-Type": "application/json",
                              "apikey": "0DmcHt5ynA4i1Q7AYFdS2NZ51IRCaocT",
                              "CD-DeviceType": '16',
