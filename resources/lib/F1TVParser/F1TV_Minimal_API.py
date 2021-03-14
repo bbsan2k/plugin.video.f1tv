@@ -71,12 +71,15 @@ class F1TV_API:
                     #     f"{sub_item['id']} - LIVE EVENT - {sub_item['metadata']['title']}",
                     # )
     
-    def getM3U8(self, content_id):
+    def getM3U8(self, content_id, channel_id=None):
         url = "https://f1tv.formula1.com/1.0/R/ENG/BIG_SCREEN_HLS/ALL/CONTENT/PLAY"
         params = {
             "contentId": content_id
         }
+        if channel_id:
+            params["channelId"] = channel_id
         stream_data = self.account_manager.getSession().get(url, params=params).json()
+        xbmc.log(str(stream_data), xbmc.LOGINFO)
         return stream_data['resultObj']['url']
 
     def callAPI(self, endpoint, method="GET", api_ver=2, params=None, data=None):

@@ -55,11 +55,9 @@ def get_mainpage():
     #There is a live event, add it to the menu
     if live_event:
         list_item = xbmcgui.ListItem(label=f"Live Now - {live_event['metadata']['title']}")
-        #Get M3U8
-        m3u8_url = _api_manager.getM3U8(live_event['id'])
-        url = get_url(action="playVideo", stream_url=m3u8_url)
+        url = get_url(action="playVideo", content_id=live_event['id'])
         list_item.setProperty('IsPlayable', 'true')
-        list_item.setInfo("video", {"title": live_event['metadata']['title']})
+        list_item.setInfo("video", {"title": f"Live Now - {live_event['metadata']['title']}"})
         #Build image url
         image_url = f"https://ott.formula1.com/image-resizer/image/{live_event['metadata']['pictureUrl']}?w=1280&h=720"
         list_item.setArt({'thumb': image_url,
@@ -88,10 +86,20 @@ def get_mainpage():
 def archive():
     archive_page_data = _api_manager.getPage(493)
     for container in archive_page_data["resultObj"]["containers"]:
-            if container["metadata"]["label"] is not None and len(container["retrieveItems"]["resultObj"]) > 0:
+        #We don't want to grab the hero as it effectively just shows "featured" content
+        if container["layout"] != "hero" and len(container["retrieveItems"]["resultObj"]) > 0:
+            if container['metadata']['label']:
                 list_item = xbmcgui.ListItem(label=container["metadata"]["label"])
-                url = get_url(action="archive_block", collection_id=container['retrieveItems']['uriOriginal'].split("/TRAY/EXTCOLLECTION/")[1])
-                xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+            else:
+                #If there is no label we need to generate one....
+                label = ""
+                for sub_item in container['retrieveItems']['resultObj']['containers']:
+                    label += f"{sub_item['metadata']['title']}, "
+                #Remove the last two characters (trailing comma)
+                label = label[:-2]
+                list_item = xbmcgui.ListItem(label=label)
+            url = get_url(action="archive_block", collection_id=container['retrieveItems']['uriOriginal'].split("/TRAY/EXTCOLLECTION/")[1])
+            xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
     # Finish creating a virtual folder.
@@ -108,10 +116,13 @@ def archive_block(collection_id):
         list_item = xbmcgui.ListItem(label=label)
         try:
             url = get_url(action="archive_year", page_id=year['actions'][0]['uri'].split("ALL/PAGE/")[1].split("/")[0])
+            xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
         except (KeyError, IndexError):
             # If we've hit this it's probably just directly a link to a season review
-            url = get_url(action="find_streams", page_id=year['id'])
-        xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+            url = get_url(action="playVideo", content_id=year['id'])
+            list_item.setProperty('IsPlayable', 'true')
+            list_item.setInfo("video", {"title": label})
+            xbmcplugin.addDirectoryItem(_handle, url, list_item, False)
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
     # Finish creating a virtual folder.
@@ -125,30 +136,31 @@ def archive_year(page_id):
         if len(container["retrieveItems"]["resultObj"]) > 0:
             label = str(container['metadata']['label'])
             list_item = xbmcgui.ListItem(label=label)
-            url = get_url(action="archive_event", data=container['retrieveItems']['resultObj']['containers'])
+            url = get_url(action="archive_category", data=container['retrieveItems']['resultObj']['containers'])
             xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
     # Finish creating a virtual folder.
     xbmcplugin.endOfDirectory(_handle)
 
-    # # Take input and decrement by 1 to get the right one.
-    # user_input = int(input("Choice> ")) - 1
+def archive_category(data):
+    #For some reason passing the data through it gets turned into a string, so we need it back to being an array/dict
+    data = ast.literal_eval(data)
+    for item in data:
+        list_item = xbmcgui.ListItem(label=item['metadata']['title'])
+        #NEED TO DO THE ADDITIONAL STREAMS CHECKING SHIT
+        # list_item.setProperty('IsPlayable', 'true')
+        # list_item.setInfo("video", {"title": item['metadata']['title']})
+        # url = get_url(action="playVideo", content_id=item['id'])
+        # xbmcplugin.addDirectoryItem(_handle, url, list_item, False)
+        url = get_url(action="archive_", content_id=item['id'])
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_handle)
 
-    # # Build menu of selection's content
-    # counter = 1
-    # for container in archive_year_data["resultObj"]["containers"][user_input][
-    #     "retrieveItems"
-    # ]["resultObj"]["containers"]:
-    #     print(f"{counter}. {container['id']} - {container['metadata']['title']}")
-    #     counter += 1
-    # # Take input and decrement by 1 to get the right one.
-    # previous_user_input = user_input
-    # user_input = int(input("Choice> ")) - 1
-    # content_id = archive_year_data["resultObj"]["containers"][previous_user_input][
-    #     "retrieveItems"
-    # ]["resultObj"]["containers"][user_input]["id"]
-    # self.check_additional_streams(content_id)
+
 
 def list_sets():
     xbmcplugin.setPluginCategory(_handle, 'Sets')
@@ -522,10 +534,10 @@ def getCorrectedM3U8(stream_url):
 
     return path
 
-def playVideo(stream_url):
-    xbmc.log(stream_url, level=xbmc.LOGDEBUG)
-
-    #play_item = xbmcgui.ListItem(path=getCorrectedM3U8(stream_url=stream_url))
+def playVideo(content_id, channel_id=None):
+    #Get the M3U8 link
+    stream_url = _api_manager.getM3U8(content_id, channel_id)
+    #List item stuff
     play_item = xbmcgui.ListItem(path=stream_url)
     xbmcplugin.setResolvedUrl(_handle, True, listitem=play_item)
 
@@ -559,6 +571,8 @@ def router(paramstring):
             archive_block(params['collection_id'])
         elif params['action'] == 'archive_year':
             archive_year(params['page_id'])
+        elif params['action'] == 'archive_category':
+            archive_category(params['data'])
         elif params['action'] == 'list_sets':
             list_sets()
         elif params['action'] == 'list_season_events':
@@ -580,7 +594,10 @@ def router(paramstring):
         elif params['action'] == 'playChannel':
             playChannel(params['channel_url'])
         elif params['action'] == 'playVideo':
-            playVideo(params['stream_url'])
+            try:
+                playVideo(params['content_id'], params['channel_id'])
+            except KeyError:
+                playVideo(params['content_id'])
         elif params['action'] == 'settings':
             _ADDON.openSettings()
         else:
