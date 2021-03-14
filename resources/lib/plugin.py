@@ -60,6 +60,11 @@ def get_mainpage():
         url = get_url(action="playVideo", stream_url=m3u8_url)
         list_item.setProperty('IsPlayable', 'true')
         list_item.setInfo("video", {"title": live_event['metadata']['title']})
+        #Build image url
+        image_url = f"https://ott.formula1.com/image-resizer/image/{live_event['metadata']['pictureUrl']}?w=1280&h=720"
+        list_item.setArt({'thumb': image_url,
+                    'icon': image_url,
+                    'fanart': image_url})
         xbmcplugin.addDirectoryItem(_handle, url, list_item, False)
     
     #Add Archive To Menu
