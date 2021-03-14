@@ -11,6 +11,7 @@ import time
 import requests
 import requests_cache
 import re
+import ast
 
 
 # Get the plugin url in plugin:// notation.
@@ -36,27 +37,101 @@ def get_url(**kwargs):
 
 def get_mainpage():
 
-    mainpage_data = _api_manager.getMainPage()
-    #Check that there are results
-    if "resultObj" in mainpage_data:
-        #Iterate over front page entries and add them to the menu
-        for container in mainpage_data['resultObj']['containers']:
-            label = container['metadata']['label']
-            target_type = container['actions'][0]['targetType']
-            uri = container['actions'][0]['uri']
-            list_item = xbmcgui.ListItem(label=label)
-            url = get_url(action=target_type, uri=uri, label=label)
-            xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    # mainpage_data = _api_manager.getMainPage()
+    # #Check that there are results
+    # if "resultObj" in mainpage_data:
+    #     #Iterate over front page entries and add them to the menu
+    #     for container in mainpage_data['resultObj']['containers']:
+    #         label = container['metadata']['label']
+    #         target_type = container['actions'][0]['targetType']
+    #         uri = container['actions'][0]['uri']
+    #         #Create Kodi folder entry
+    #         list_item = xbmcgui.ListItem(label=label)
+    #         url = get_url(action=target_type, uri=uri, label=label)
+    #         xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
     
+    #Add Archive To Menu
+    list_item = xbmcgui.ListItem(label="Archive")
+    url = get_url(action="archive")
+    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    #Add Shows To Menu
+    list_item = xbmcgui.ListItem(label="Shows")
+    url = get_url(action="shows")
+    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    #Add Documentaries to Menu
+    list_item = xbmcgui.ListItem(label="Documentaries")
+    url = get_url(action="Documentaries")
+    xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
     # Finish creating a virtual folder.
     xbmcplugin.endOfDirectory(_handle)
 
-def f1tv_page(uri):
-    #Get page id from uri
-    page_id = uri.split("PAGE/")[1].split("/")[0]
-    page_data = _api_manager.getPage(page_id)
+def archive():
+    archive_page_data = _api_manager.getPage(493)
+    for container in archive_page_data["resultObj"]["containers"]:
+            if container["metadata"]["label"] is not None and len(container["retrieveItems"]["resultObj"]) > 0:
+                list_item = xbmcgui.ListItem(label=container["metadata"]["label"])
+                url = get_url(action="archive_block", collection_id=container['retrieveItems']['uriOriginal'].split("/TRAY/EXTCOLLECTION/")[1])
+                xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_handle)
+
+def archive_block(collection_id):
+    archive_years = _api_manager.getPage(f"EXTCOLLECTION/{collection_id}")
+    # Build menu for archive block's years
+    for year in archive_years["resultObj"]["containers"]:
+        try:
+            label = str(year['metadata']['season'])
+        except KeyError:
+            label = str(year['metadata']['title'])
+        list_item = xbmcgui.ListItem(label=label)
+        try:
+            url = get_url(action="archive_year", page_id=year['actions'][0]['uri'].split("ALL/PAGE/")[1].split("/")[0])
+        except (KeyError, IndexError):
+            # If we've hit this it's probably just directly a link to a season review
+            url = get_url(action="find_streams", page_id=year['id'])
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_handle)
+
+def archive_year(page_id):
+    """Individual years from archive, used by archive_year_block"""
+    archive_year_data = _api_manager.getPage(page_id)
+    # Build menu for year's different categories
+    for container in archive_year_data["resultObj"]["containers"]:
+        if len(container["retrieveItems"]["resultObj"]) > 0:
+            label = str(container['metadata']['label'])
+            list_item = xbmcgui.ListItem(label=label)
+            url = get_url(action="archive_event", data=container['retrieveItems']['resultObj']['containers'])
+            xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_handle)
+
+    # # Take input and decrement by 1 to get the right one.
+    # user_input = int(input("Choice> ")) - 1
+
+    # # Build menu of selection's content
+    # counter = 1
+    # for container in archive_year_data["resultObj"]["containers"][user_input][
+    #     "retrieveItems"
+    # ]["resultObj"]["containers"]:
+    #     print(f"{counter}. {container['id']} - {container['metadata']['title']}")
+    #     counter += 1
+    # # Take input and decrement by 1 to get the right one.
+    # previous_user_input = user_input
+    # user_input = int(input("Choice> ")) - 1
+    # content_id = archive_year_data["resultObj"]["containers"][previous_user_input][
+    #     "retrieveItems"
+    # ]["resultObj"]["containers"][user_input]["id"]
+    # self.check_additional_streams(content_id)
 
 def list_sets():
     xbmcplugin.setPluginCategory(_handle, 'Sets')
@@ -458,12 +533,14 @@ def router(paramstring):
     params = dict(parse_qsl(paramstring))
     # Check the parameters passed to the plugin
     if params:
-        if params['action'] == 'PAGE':
+        if params['action'] == 'archive':
             # F1TV Page Activity
-            f1tv_page(params['uri'])
-        elif params['action'] == 'list_circuits':
-            # List all seasons
-            list_circuits()
+            archive()
+        elif params['action'] == 'archive_block':
+            #resultObj based input
+            archive_block(params['collection_id'])
+        elif params['action'] == 'archive_year':
+            archive_year(params['page_id'])
         elif params['action'] == 'list_sets':
             list_sets()
         elif params['action'] == 'list_season_events':
