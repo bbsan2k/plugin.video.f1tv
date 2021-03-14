@@ -57,6 +57,27 @@ class F1TV_API:
         page_data = self.account_manager.getSession().get(f"{self.f1tvapi}ALL/PAGE/{page_id}/F1_TV_Pro_Annual/14")
         if page_data.ok:
             return page_data.json()
+    
+    def getLiveEvent(self):
+        frontpage_url = f"{self.f1tvapi}ALL/PAGE/395/F1_TV_Pro_Monthly/14"
+        frontpage_data = self.account_manager.getSession().get(frontpage_url).json()
+        for item in frontpage_data["resultObj"]["containers"]:
+            for sub_item in item["retrieveItems"]["resultObj"]["containers"]:
+                if sub_item["metadata"]["contentSubtype"] == "LIVE":
+                    # This is (one of?) the currently live event(s)!
+                    return sub_item
+                    # menu_items.insert(
+                    #     1,
+                    #     f"{sub_item['id']} - LIVE EVENT - {sub_item['metadata']['title']}",
+                    # )
+    
+    def getM3U8(self, content_id):
+        url = "https://f1tv.formula1.com/1.0/R/ENG/BIG_SCREEN_HLS/ALL/CONTENT/PLAY"
+        params = {
+            "contentId": content_id
+        }
+        stream_data = self.account_manager.getSession().get(url, params=params).json()
+        return stream_data['resultObj']['url']
 
     def callAPI(self, endpoint, method="GET", api_ver=2, params=None, data=None):
      #   locale.setlocale(locale.LC_ALL, 'en_US')
@@ -134,14 +155,14 @@ class F1TV_API:
         event = self.callAPI(__TV_API_ENDPOINTS__['event'].format(event_uid=event_uid))
         return event
 
-    def getLiveEvent(self):
-        """ Returns event_uid from API"""
-        elements = self.callAPI("home")['objects'][0]['items']
-        for element in elements:
-            if 'set_type_slug' in element['content_url']:
-                if element['content_url']['set_type_slug'] == 'grand-prix-header':
-                    return element['content_url']['items'][0]['content_url']['uid']
-        return None
+    # def getLiveEvent(self):
+    #     """ Returns event_uid from API"""
+    #     elements = self.callAPI("home")['objects'][0]['items']
+    #     for element in elements:
+    #         if 'set_type_slug' in element['content_url']:
+    #             if element['content_url']['set_type_slug'] == 'grand-prix-header':
+    #                 return element['content_url']['items'][0]['content_url']['uid']
+    #     return None
 
     def getSetMetadata(self,set_uid):
         """ Return Video-Set Object from API by supplying set_uid """
