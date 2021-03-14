@@ -45,6 +45,7 @@ class AccountManager:
                 raise ValueError('Subscription is not active.')
 
             self.session_token = r.json()["data"]["subscriptionToken"]
+            xbmc.log(self.session_token, xbmc.LOGINFO)
 
             # Save the token
             try:
@@ -59,7 +60,7 @@ class AccountManager:
 
         token_request = self.session.post(__ACCOUNT_SOCIAL_AUTHENTICATE__, data=json.dumps(dict))
         if token_request.ok:
-            self.session.headers["Authorization"] = "JWT " + token_request.json()["token"]
+            #self.session.headers["Authorization"] = "JWT " + token_request.json()["token"]
 
             # Save the token
             try:
@@ -92,6 +93,7 @@ class AccountManager:
             self.__requestSessionToken()
         else:
             pass
+        self.session.headers['ascendontoken'] = self.session_token
 
     def __createAuthorization__(self):
         if self.session_token is not None:
@@ -106,7 +108,8 @@ class AccountManager:
                     if token_validity_time_remaining.total_seconds() <= 60 * 60 * 24:
                         self.__requestSocialToken()
                     else:
-                        self.session.headers["Authorization"] = "JWT " + cached_token
+                        #self.session.headers["Authorization"] = "JWT " + cached_token
+                        pass
                 else:
                     self.__requestSocialToken()
 
@@ -125,7 +128,7 @@ class AccountManager:
                              "apikey": api_key,
                              "CD-DeviceType": '16',
                              "CD-DistributionChannel": __HEADER_CD_DIST_CHANNEL__,
-                             'User-Agent': 'okhttp/3.14.2'}
+                             'User-Agent': 'RaceControl'}
         #3 second cache for all requests
         requests_cache.install_cache(expire_after=3)
         self.session_token = None
@@ -133,8 +136,8 @@ class AccountManager:
     def getSession(self):
         if self.session_token is None:
             self.__createSession__()
-        if "Authorization" not in self.session.headers:
-            self.__createAuthorization__()
+        #if "Authorization" not in self.session.headers:
+        #    self.__createAuthorization__()
 
         return self.session
 
