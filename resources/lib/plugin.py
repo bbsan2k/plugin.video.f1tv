@@ -49,6 +49,18 @@ def get_mainpage():
     #         list_item = xbmcgui.ListItem(label=label)
     #         url = get_url(action=target_type, uri=uri, label=label)
     #         xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
+
+    #Check for a live event
+    live_event = _api_manager.getLiveEvent()
+    #There is a live event, add it to the menu
+    if live_event:
+        list_item = xbmcgui.ListItem(label=live_event['metadata']['title'])
+        #Get M3U8
+        m3u8_url = _api_manager.getM3U8(live_event['id'])
+        url = get_url(action="playVideo", stream_url=m3u8_url)
+        list_item.setProperty('IsPlayable', 'true')
+        list_item.setInfo("video", {"title": live_event['metadata']['title']})
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, False)
     
     #Add Archive To Menu
     list_item = xbmcgui.ListItem(label="Archive")
@@ -508,7 +520,8 @@ def getCorrectedM3U8(stream_url):
 def playVideo(stream_url):
     xbmc.log(stream_url, level=xbmc.LOGDEBUG)
 
-    play_item = xbmcgui.ListItem(path=getCorrectedM3U8(stream_url=stream_url))
+    #play_item = xbmcgui.ListItem(path=getCorrectedM3U8(stream_url=stream_url))
+    play_item = xbmcgui.ListItem(path=stream_url)
     xbmcplugin.setResolvedUrl(_handle, True, listitem=play_item)
 
 def playEpisode(episode_slug):
@@ -561,6 +574,8 @@ def router(paramstring):
             playEpisode(params['episode_slug'])
         elif params['action'] == 'playChannel':
             playChannel(params['channel_url'])
+        elif params['action'] == 'playVideo':
+            playVideo(params['stream_url'])
         elif params['action'] == 'settings':
             _ADDON.openSettings()
         else:
