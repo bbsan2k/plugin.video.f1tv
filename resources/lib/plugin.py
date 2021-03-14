@@ -54,7 +54,7 @@ def get_mainpage():
     live_event = _api_manager.getLiveEvent()
     #There is a live event, add it to the menu
     if live_event:
-        list_item = xbmcgui.ListItem(label=live_event['metadata']['title'])
+        list_item = xbmcgui.ListItem(label=f"Live Now - {live_event['metadata']['title']}")
         #Get M3U8
         m3u8_url = _api_manager.getM3U8(live_event['id'])
         url = get_url(action="playVideo", stream_url=m3u8_url)
