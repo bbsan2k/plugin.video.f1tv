@@ -71,6 +71,36 @@ class F1TV_API:
                     #     f"{sub_item['id']} - LIVE EVENT - {sub_item['metadata']['title']}",
                     # )
     
+    def check_additional_streams(self, content_id):
+        """Method to check if contendId has additional streams (IE: Onboards, PLC, Data)"""
+        url = f"{self.f1tvapi}ALL/CONTENT/VIDEO/{content_id}/F1_TV_Pro_Monthly/14"
+        content_data = self.account_manager.getSession().get(url).json()
+
+        additional_streams = []
+        additional_streams.append({
+            "content_id": content_id,
+            "channel_id": None,
+            "title": "Main Feed"
+        })
+
+        if "additionalStreams" in content_data["resultObj"]["containers"][0]["metadata"]:
+            # There are some additional streams - print them out and give a choice
+            for additional_stream in content_data["resultObj"]["containers"][0]["metadata"]["additionalStreams"]:
+                # Get channel id
+                channel_id = (
+                    additional_stream["playbackUrl"]
+                    .split("CONTENT/PLAY?")[1]
+                    .split("&")[0]
+                    .split("=")[1]
+                )
+                #Add stream data to array
+                additional_streams.append({
+                    "content_id": content_id,
+                    "channel_id": channel_id,
+                    "title": additional_stream['title']
+                })
+        return additional_streams
+
     def getM3U8(self, content_id, channel_id=None):
         url = "https://f1tv.formula1.com/1.0/R/ENG/BIG_SCREEN_HLS/ALL/CONTENT/PLAY"
         params = {

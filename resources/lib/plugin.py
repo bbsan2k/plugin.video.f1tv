@@ -55,15 +55,16 @@ def get_mainpage():
     #There is a live event, add it to the menu
     if live_event:
         list_item = xbmcgui.ListItem(label=f"Live Now - {live_event['metadata']['title']}")
-        url = get_url(action="playVideo", content_id=live_event['id'])
-        list_item.setProperty('IsPlayable', 'true')
-        list_item.setInfo("video", {"title": f"Live Now - {live_event['metadata']['title']}"})
-        #Build image url
-        image_url = f"https://ott.formula1.com/image-resizer/image/{live_event['metadata']['pictureUrl']}?w=1280&h=720"
-        list_item.setArt({'thumb': image_url,
-                    'icon': image_url,
-                    'fanart': image_url})
-        xbmcplugin.addDirectoryItem(_handle, url, list_item, False)
+        # url = get_url(action="playVideo", content_id=live_event['id'])
+        # list_item.setProperty('IsPlayable', 'true')
+        # list_item.setInfo("video", {"title": f"Live Now - {live_event['metadata']['title']}"})
+        # #Build image url
+        # image_url = f"https://ott.formula1.com/image-resizer/image/{live_event['metadata']['pictureUrl']}?w=1280&h=720"
+        # list_item.setArt({'thumb': image_url,
+        #             'icon': image_url,
+        #             'fanart': image_url})
+        url = get_url(action="additional_streams", content_id=live_event['id'])
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
     
     #Add Archive To Menu
     list_item = xbmcgui.ListItem(label="Archive")
@@ -78,6 +79,24 @@ def get_mainpage():
     url = get_url(action="Documentaries")
     xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
 
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_handle)
+
+def additional_streams_folder(content_id):
+    additional_streams = _api_manager.check_additional_streams(content_id=content_id)
+    for additional_stream in additional_streams:
+        list_item = xbmcgui.ListItem(label=f"{additional_stream['title']}")
+        url = get_url(action="playVideo", content_id=additional_stream['content_id'], channel_id=additional_stream['channel_id'])
+        list_item.setProperty('IsPlayable', 'true')
+        list_item.setInfo("video", {"title": additional_stream['title']})
+        # #Build image url
+        # image_url = f"https://ott.formula1.com/image-resizer/image/{live_event['metadata']['pictureUrl']}?w=1280&h=720"
+        # list_item.setArt({'thumb': image_url,
+        #             'icon': image_url,
+        #             'fanart': image_url})
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, False)
     # Add a sort method for the virtual folder items (alphabetically, ignore articles)
     xbmcplugin.addSortMethod(_handle, xbmcplugin.SORT_METHOD_UNSORTED)
     # Finish creating a virtual folder.
@@ -598,6 +617,8 @@ def router(paramstring):
                 playVideo(params['content_id'], params['channel_id'])
             except KeyError:
                 playVideo(params['content_id'])
+        elif params['action'] == "additional_streams":
+            additional_streams_folder(params['content_id'])
         elif params['action'] == 'settings':
             _ADDON.openSettings()
         else:
