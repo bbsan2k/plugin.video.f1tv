@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-    <setting id="debug" type="bool" label="32001" default="false"/>
     <setting label="40001" type="text" id="username" enable="!eq(-1,)" default=""/>
     <setting label="40002" type="text" id="password" option="hidden"  enable="!eq(-1,)" default=""/>
-    <setting label="40003" type="text" id="apikey" enable="false" default="" />
-    <setting label="40004" type="text" id="system_id" enable="false" default="" />
 </settings>
 
