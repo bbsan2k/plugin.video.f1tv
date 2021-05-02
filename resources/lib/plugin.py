@@ -143,6 +143,9 @@ def renderMainPage():
         if "image" in item:
             list_item.setArt({"thumb": item["image"]})
 
+        if "description" in item:
+            list_item.setInfo("video", {"plot": item["description"]})
+
         xbmcplugin.addDirectoryItem(_handle, url, list_item, folder)
 
     

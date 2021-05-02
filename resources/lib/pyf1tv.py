@@ -251,12 +251,18 @@ class PYF1TV:
             if item["layout"] == "hero":
                 for container in item["retrieveItems"]["resultObj"]["containers"]:
                     if container["metadata"]["contentSubtype"] == "LIVE":
-                        # This is (one of?) the currently live event(s)!
-                        item = {}
-                        item["uri"] = f"/CONTENT/PLAY?contentId={container['id']}"
                         item["target"] = "PLAY"
+                        item["uri"] = f"CONTENT/PLAY?contentId={container['id']}"    
                         item["name"] = f"LIVE: {container['metadata']['title']}"
+                        item["image"] = self.getImage(container)
+
                         return item
+                        # This is (one of?) the currently live event(s)!
+                        # item = {}
+                        # item["uri"] = f"/CONTENT/PLAY?contentId={container['id']}"
+                        # item["target"] = "PLAY"
+                        # item["name"] = f"LIVE: {container['metadata']['title']}"
+                        # return item
         
         return None
                     
