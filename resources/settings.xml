@@ -2,5 +2,7 @@
 <settings>
     <setting label="40001" type="text" id="username" enable="!eq(-1,)" default=""/>
     <setting label="40002" type="text" id="password" option="hidden"  enable="!eq(-1,)" default=""/>
+    <setting label="50000" type="text" id="ascendtoken" visible="false" />
+    <setting label="50001" type="number" id="cacheTimeout" visible="false" />
 </settings>
 
