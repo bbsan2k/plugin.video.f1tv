@@ -4,6 +4,11 @@ import os.path
 import time
 import requests
 
+class F1TVError(Exception):
+    pass
+
+class F1TVLoginError(F1TVError):
+    pass
 
 class PYF1TV:
     """API Adapter for F1TV"""
@@ -71,6 +76,8 @@ class PYF1TV:
                 json=data,
             )
             # return the ascendontoken
+            if auth_data.status_code != 200:
+                raise F1TVLoginError()
             self.ascendontoken = auth_data.json()["data"]["subscriptionToken"]
             self.auth_data = {
                 "time": int(time.time()),
