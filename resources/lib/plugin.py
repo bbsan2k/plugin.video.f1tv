@@ -10,7 +10,7 @@ from datetime import datetime
 import time
 import requests
 import re
-from .pyf1tv import PYF1TV
+from .pyf1tv import F1TVLoginError, PYF1TV
 
 # Get the plugin url in plugin:// notation.
 _url = sys.argv[0]
@@ -159,10 +159,18 @@ def renderMainPage():
     xbmcplugin.endOfDirectory(_handle)
 
 def cacheGetter():
-    return None
+    item = { 'token': _ADDON.getSetting('ascendtoken'),
+             'time': _ADDON.getSetting('cacheTimeout')}
+    if item['time'] and item['token'] and item['token'] != '':
+        item['time'] = int(item['time'])
+        return item
+    else:
+        return None
 
 def cacheSetter(item):
-    print(item)
+    _ADDON.setSetting("ascendtoken", item['token'])
+    _ADDON.setSetting("cacheTimeout", str(item['time']))
+    
 
 def log(text):
     xbmc.log(text, xbmc.LOGINFO)
@@ -170,14 +178,18 @@ def log(text):
 def run():
     try:
         global _api
-        _api = PYF1TV(username=_ADDON.getSetting("username"), password=_ADDON.getSetting("password"), cacheGetter=cacheGetter, cacheSetter=cacheSetter, log=log)
-
-        xbmc.log(xbmc.getLanguage(format=xbmc.ISO_639_1), xbmc.LOGERROR)
+        _api = PYF1TV(username=_ADDON.getSetting("username"), 
+                        password=_ADDON.getSetting("password"), 
+                        cacheGetter=cacheGetter, 
+                        cacheSetter=cacheSetter, 
+                        log=log)
     
-    except ValueError as error:
-
-        response = xbmcgui.Dialog().yesno('Login not possible.', error.message, 'Enter Settings?',nolabel='Exit', yeslabel='Settings')
-        xbmc.log(error.message, xbmc.LOGERROR)
+    except F1TVLoginError as error:
+        response = xbmcgui.Dialog().yesno(heading='Login Error',
+                                            message='Enter Settings?', 
+                                            nolabel='Exit', 
+                                            yeslabel='Settings')
+        #xbmc.log(error.message, xbmc.LOGERROR)
         if response:
             _ADDON.openSettings()
 
