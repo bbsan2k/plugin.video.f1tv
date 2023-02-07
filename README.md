@@ -2,6 +2,12 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+
+## Please note
+
+This plugin has been abandoned since there were breaking API changes in F1TV. While it may be possible to fix it, the effort in doing so unfortunately is too big for me.
+Feel free to fork and update if you like
+
 ## Disclaimer
 
 This plugin is not officially commisioned/supported by F1TV / FOM.
